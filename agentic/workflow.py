@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import json
 import re
 from typing import Any, Dict, List, Optional, TypedDict
@@ -6,6 +7,17 @@ import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
+
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_BASE_URL = os.getenv(
+    "DEEPSEEK_BASE_URL",
+    "https://api.deepseek.com",
+)
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_TEMPERATURE = float(os.getenv("DEEPSEEK_TEMPERATURE", "0"))
+
+if not DEEPSEEK_API_KEY:
+    raise ValueError("DEEPSEEK_API_KEY is missing.")
 
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
@@ -51,12 +63,17 @@ class TicketState(TypedDict, total=False):
 
 # Global models & tools
 
-LLM = ChatOpenAI(model="gpt-4o-mini")
+LLM = ChatOpenAI(
+    model=DEEPSEEK_MODEL,
+    api_key=DEEPSEEK_API_KEY,
+    base_url=DEEPSEEK_BASE_URL,
+    temperature=DEEPSEEK_TEMPERATURE,
+)
 
-INTAKE_AGENT = build_intake_agent()
-CLASSIFIER_AGENT = build_classifier_agent()
-ESCALATION_AGENT = build_escalation_agent()
-SUPERVISOR_AGENT = build_supervisor_agent()
+INTAKE_AGENT = build_intake_agent(model=LLM)
+CLASSIFIER_AGENT = build_classifier_agent(model=LLM)
+ESCALATION_AGENT = build_escalation_agent(model=LLM)
+SUPERVISOR_AGENT = build_supervisor_agent(model=LLM)
 
 #KB_SEARCH_TOOL = get_kb_search_tool()
 ACCOUNT_GET_USER_TOOL = get_account_get_user_tool()
@@ -513,7 +530,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
         "Just explain what the user should do or what we can do for them."
     )
 
-    llm_resp = LLM.invoke(
+    llm_resp = await LLM.ainvoke(
         [
             ("system", system_prompt),
             ("human", user_prompt),

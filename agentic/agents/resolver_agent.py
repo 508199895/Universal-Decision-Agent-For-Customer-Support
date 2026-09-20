@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Dict, Any
 
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt import create_react_agent
@@ -13,7 +13,7 @@ from agentic.tools.account_client import get_account_tools
 from agentic.tools.memory_client import get_memory_tools
 
 
-def build_resolver_agent(model_name: str = "gpt-4o-mini") -> Any:
+def build_resolver_agent(*, model: BaseChatModel) -> Any:
     """
     Resolver Agent
 
@@ -83,8 +83,6 @@ def build_resolver_agent(model_name: str = "gpt-4o-mini") -> Any:
             "  status='needs_escalation' and explain why in 'notes_for_human'.\n"
         )
     )
-
-    model = ChatOpenAI(model=model_name)
 
     # Use a small in-memory checkpointer just for this agent's internal ReAct reasoning
     checkpointer = MemorySaver()
