@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from typing import Dict, Any
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 
 
-def build_supervisor_agent(model_name: str = "gpt-4o-mini") -> Runnable:
+def build_supervisor_agent(*, model: BaseChatModel) -> Runnable:
     """
     Supervisor Agent.
 
@@ -15,8 +15,6 @@ def build_supervisor_agent(model_name: str = "gpt-4o-mini") -> Runnable:
       - "escalation"  -> prepare human handoff
       - "done"        -> ticket is resolved, nothing else to do
     """
-
-    model = ChatOpenAI(model=model_name)
 
     # Resolver-first policy:
     # - If resolver_status is None (no attempt yet)        -> "resolver"

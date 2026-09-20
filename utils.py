@@ -9,22 +9,8 @@ from langchain_core.messages import (
     HumanMessage, 
 )
 from langgraph.graph.state import CompiledStateGraph
-from dotenv import load_dotenv
-import os
-
-
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is missing. Set it in your .env file.")
 
 Base = declarative_base()
-
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is missing. Set it in your .env file.")
 
 
 def reset_db(db_path: str, echo: bool = True):

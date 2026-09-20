@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from typing import Any, Dict
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 
 
-def build_intake_agent(model_name: str = "gpt-4o-mini") -> Runnable:
+def build_intake_agent(*, model: BaseChatModel) -> Runnable:
     """
     Intake Agent
 
@@ -24,8 +24,6 @@ def build_intake_agent(model_name: str = "gpt-4o-mini") -> Runnable:
             "suspected_language": "en"
         }
     """
-
-    model = ChatOpenAI(model=model_name)
 
     system = (
         "You are the Intake Agent for UDA-Hub. "

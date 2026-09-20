@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from typing import Dict, Any
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 
 
-def build_classifier_agent(model_name: str = "gpt-4o-mini") -> Runnable:
+def build_classifier_agent(*, model: BaseChatModel) -> Runnable:
     """
     Classifier Agent.
     """
-
-    model = ChatOpenAI(model=model_name)
 
     system = (
         "You are the Classifier Agent for UDA-Hub.\n"
