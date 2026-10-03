@@ -2,72 +2,126 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import sys
 from pathlib import Path
 from typing import Dict, Any, List
 
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_core.tools import BaseTool
+from langchain.mcp import MCPAdapter
+from langchain_core.tools import BaseTool, StructuredTool
 
-# Global client instance (lazy init)
-_client: MultiServerMCPClient | None = None
+# Global adapter instance (lazy init)
+_client: MCPAdapter | None = None
 
 # Resolve project root (uda-hub/)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+_SERVER_TOOL_PREFIXES = {
+    "kb": ("kb_",),
+    "account": ("account_",),
+    "memory": ("memory_",),
+    "qdrant": ("qdrant_",),
+}
 
-def _build_connections_config() -> Dict[str, Dict[str, Any]]:
+
+def _build_connections_config() -> Dict[str, Any]:
     """
-    Build the MultiServerMCPClient connections config.
+    Build a canonical multi-server MCP configuration for MCPAdapter.
 
     We use stdio transport and launch each FastMCP server as a subprocess
-    via `python server.py`.
+    with the current Python interpreter. Qdrant is reached over Streamable HTTP.
     """
     return {
-        "kb": {
-            "transport": "stdio",
-            "command": "python",
-            "args": [str(PROJECT_ROOT / "mcp_services" / "kb" / "server.py")],
-        },
-        "account": {
-            "transport": "stdio",
-            "command": "python",
-            "args": [str(PROJECT_ROOT / "mcp_services" / "account" / "server.py")],
-        },
-        "memory": {
-            "transport": "stdio",
-            "command": "python",
-            "args": [str(PROJECT_ROOT / "mcp_services" / "memory" / "server.py")],
-        },
+        "mcpServers": {
+            "kb": {
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [str(PROJECT_ROOT / "mcp_services" / "kb" / "server.py")],
+            },
+            "account": {
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [str(PROJECT_ROOT / "mcp_services" / "account" / "server.py")],
+            },
+            "memory": {
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [str(PROJECT_ROOT / "mcp_services" / "memory" / "server.py")],
+            },
+            "qdrant": {
+                "transport": "streamable-http",
+                "url": os.getenv(
+                    "QDRANT_MCP_URL",
+                    "http://127.0.0.1:8000/mcp",
+                ),
+            },
+        }
     }
 
 
-async def aget_client() -> MultiServerMCPClient:
+async def aget_client() -> MCPAdapter:
     """
-    Async helper to initialize (once) and return the global MultiServerMCPClient.
+    Async helper to initialize (once) and return the global MCPAdapter.
 
     Safe to use inside Jupyter and async code.
     """
     global _client
     if _client is None:
-        _client = MultiServerMCPClient(_build_connections_config())
+        _client = MCPAdapter(_build_connections_config())
     return _client
+
+
+def _normalize_text_result(result: Any) -> Any:
+    """Preserve the project's pre-MCPAdapter behavior for text-only tools."""
+    if (
+        isinstance(result, list)
+        and len(result) == 1
+        and isinstance(result[0], dict)
+        and result[0].get("type") == "text"
+        and isinstance(result[0].get("text"), str)
+    ):
+        return result[0]["text"]
+    return result
+
+
+def _with_text_result_compatibility(tool: BaseTool) -> BaseTool:
+    """Wrap an MCPAdapter tool so one text content block is returned as a string."""
+
+    async def invoke_tool(**arguments: Any) -> Any:
+        return _normalize_text_result(await tool.ainvoke(arguments))
+
+    return StructuredTool(
+        name=tool.name,
+        description=tool.description,
+        args_schema=tool.args_schema,
+        coroutine=invoke_tool,
+        return_direct=tool.return_direct,
+        tags=tool.tags,
+        metadata=tool.metadata,
+    )
 
 
 async def aget_tools_for_servers(*servers: str) -> List[BaseTool]:
     """
     Async helper: fetch LangChain tools from one or more MCP servers.
 
-    NOTE: MultiServerMCPClient.get_tools() returns tools from *all* servers,
-    so we filter by name prefix (kb_, account_, memory_) when `servers`
-    are specified.
+    MCPAdapter namespaces tools from a multi-server config as
+    `<server>_<upstream_tool>`, so requested servers are filtered by namespace.
     """
     client = await aget_client()
-    all_tools = await client.get_tools()  # no positional args
+    all_tools = [
+        _with_text_result_compatibility(tool)
+        for tool in await client.list_tools()
+    ]
 
     if not servers:
         return all_tools
 
-    prefixes = tuple(f"{s}_" for s in servers)
+    prefixes = tuple(
+        prefix
+        for server in servers
+        for prefix in _SERVER_TOOL_PREFIXES.get(server, (f"{server}_",))
+    )
     filtered = [t for t in all_tools if t.name.startswith(prefixes)]
     return filtered
 

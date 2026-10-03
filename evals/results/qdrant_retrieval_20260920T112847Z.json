@@ -1,0 +1,574 @@
+{
+  "generated_at": "2026-09-20T11:28:47.233745+00:00",
+  "collection_name": "uda-hub-retrieval-eval",
+  "article_count": 14,
+  "query_count": 56,
+  "top_k": 3,
+  "summary": {
+    "hit_at_3": 0.0,
+    "top_1_accuracy": 0.0,
+    "mrr_at_3": 0.0
+  },
+  "results": [
+    {
+      "input": "My CultPass app keeps crashing when I try to open it.",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why does the CultPass app freeze on my phone?",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My CultPass app crashes as soon as I open it. Can you help me check?",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "After clearing the cache on Android, the CultPass app still freezes. Can you help me look into it?",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why was I charged twice for my CultPass subscription this month?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "CultPass kept crashing during the live event I paid for, so I couldn't watch it. Why did this happen?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I have duplicate charges on my CultPass account and want a refund, can you help?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I experienced a CultPass service outage and need help with a refund. Can you check transaction ID 987654?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I don't see any CultPass experiences in my area. Is it because my city isn't supported, or because it was just added and is still empty?",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My city shows up on CultPass but there's nothing available to book.",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I can't see events in my city in CultPass, and the page says Region or City Not Supported. Can you help me check?",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I allowed location permission, but CultPass still only shows other cities and no events near me. Why?",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My experience was cancelled by the organizer. Will my quota be deducted?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "What happens to my quota if an event is cancelled?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My experience RES-12345 was cancelled by the organizer, can you check why?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "The organizer cancelled my event due to low attendance, why is my quota affected?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "What should I do if my CultPass renewal payment fails?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My renewal payment failed and my card was declined, so I can't access my account. Can you help?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My CultPass card was declined and I'm not sure why - can you help me with this?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My CultPass access is temporarily paused and I'm not sure why - can you help me sort this out?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I attended a CultPass event with reservation ID [reservation_id], but my monthly quota in the app didn't update. Can you check why?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My monthly quota didn't update after I attended an event, even though my reservation shows 'attended'. Why is that?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My reservation RES-12345 shows as attended, but my quota still hasn't updated. Can you check this for me?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My reservation_id is RES-12345, and my CultPass quota hasn't updated since I joined the event. Can you check it for me?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why does an experience show 'No Slots Available' when I try to book?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I'm trying to book an experience in the app, but it says 'No Slots Available.' Why is that happening?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why does the CultPass app show 'No Slots Available' when I try to reserve an experience?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why am I seeing 'No Slots Available' for a premium event on CultPass?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I'm trying to change my email address in the CultPass app but I can't figure out where to go.",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "How can I update my phone number on my profile in CultPass?",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I updated my email in CultPass under 'My Account' > 'Profile Settings', and it says it may need verification. Why is that?",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My CultPass profile is locked in Profile Settings, and I can't change my phone number. Can you help?",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "How do I reserve a spot for an event using the CultPass app?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "How can I reserve a spot for an event on CultPass?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I tapped Reserve in the CultPass app to book an event, but haven't received a reservation confirmation email—can you check?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I booked an event in the CultPass app and want to check if my QR code is ready. Can you help me check?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I can't log into my CultPass account.",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why am I not getting the password reset email?",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Hi, I tapped 'Forgot Password' on the login screen but haven't received the reset email. Can you help?",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I still can't log in to CultPass even after using the correct registered email. Can you help me get back in?",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I'm wondering what actually comes with a CultPass subscription each month — how many cultural experiences do I get, and what kinds of events can I use them for?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Do concerts and museums both count as part of the 4 cultural experiences I get each month?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I have a CultPass subscription and thought music concerts were included, but my premium experience is asking for an additional fee. Can you check reservation RES-12345?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My CultPass subscription says 4 cultural experiences per month, and I want to use one for a film screening. Can you help me with that?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I'm trying to use my CultPass QR code but it won't scan.",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My entry QR code in the CultPass app won't scan. Can you help?",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "My CultPass entry QR code won't scan. Can you help me look into it?",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I keep failing to scan a screenshot of my QR code—could the screenshot be the problem?",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I can't figure out how to cancel my CultPass subscription.",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Can I just pause my subscription for a while instead?",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I paused my subscription in Manage Plan on the CultPass app, will it resume automatically when I reactivate it?",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I canceled my CultPass subscription from My Account, and it says it will stay active until the end of my billing cycle, is that normal?",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I'm booking a premium event through the app—can you explain what the extra fee is?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Does my normal monthly membership cover premium events with exclusive access or limited seats, or do I have to pay extra for those at checkout in the app?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I was charged an extra fee for a Premium experience even though my normal monthly quota should apply—can you check?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I'm trying to get exclusive access to a Premium event, but it's asking for additional payment—can you explain that?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [],
+      "expected_rank": null,
+      "retrieval_context": [],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    }
+  ]
+}

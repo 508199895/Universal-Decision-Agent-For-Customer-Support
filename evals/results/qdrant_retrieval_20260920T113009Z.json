@@ -1,0 +1,1022 @@
+{
+  "generated_at": "2026-09-20T11:30:09.435088+00:00",
+  "collection_name": "uda-hub-retrieval-eval",
+  "article_count": 14,
+  "query_count": 56,
+  "top_k": 3,
+  "summary": {
+    "hit_at_3": 0.9642857142857143,
+    "top_1_accuracy": 0.9107142857142857,
+    "mrr_at_3": 0.9375
+  },
+  "results": [
+    {
+      "input": "My CultPass app keeps crashing when I try to open it.",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Why does the CultPass app freeze on my phone?",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My CultPass app crashes as soon as I open it. Can you help me check?",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "After clearing the cache on Android, the CultPass app still freezes. Can you help me look into it?",
+      "expected_article_id": "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+      "retrieved_article_ids": [
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "69287824-4b92-45cf-9870-64129fef1f0d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Why was I charged twice for my CultPass subscription this month?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "c5f010d9-4000-42b4-a137-758a85920227"
+      ],
+      "expected_rank": 2,
+      "retrieval_context": [
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.5
+    },
+    {
+      "input": "CultPass kept crashing during the live event I paid for, so I couldn't watch it. Why did this happen?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7"
+      ],
+      "expected_rank": null,
+      "retrieval_context": [
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\""
+      ],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "I have duplicate charges on my CultPass account and want a refund, can you help?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "c5f010d9-4000-42b4-a137-758a85920227",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I experienced a CultPass service outage and need help with a refund. Can you check transaction ID 987654?",
+      "expected_article_id": "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+      "retrieved_article_ids": [
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "6235772b-4e21-47f9-89b2-33a69cc348ab",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I don't see any CultPass experiences in my area. Is it because my city isn't supported, or because it was just added and is still empty?",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My city shows up on CultPass but there's nothing available to book.",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I can't see events in my city in CultPass, and the page says Region or City Not Supported. Can you help me check?",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I allowed location permission, but CultPass still only shows other cities and no events near me. Why?",
+      "expected_article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "retrieved_article_ids": [
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My experience was cancelled by the organizer. Will my quota be deducted?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "What happens to my quota if an event is cancelled?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My experience RES-12345 was cancelled by the organizer, can you check why?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+        "774687aa-4080-405e-b253-d17ad9384ec5",
+        "69287824-4b92-45cf-9870-64129fef1f0d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "The organizer cancelled my event due to low attendance, why is my quota affected?",
+      "expected_article_id": "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+      "retrieved_article_ids": [
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474",
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "What should I do if my CultPass renewal payment fails?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [
+        "6235772b-4e21-47f9-89b2-33a69cc348ab",
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "ecb045cf-bb41-4164-84df-839497d3472c"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\"",
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My renewal payment failed and my card was declined, so I can't access my account. Can you help?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [
+        "6235772b-4e21-47f9-89b2-33a69cc348ab",
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "ecb045cf-bb41-4164-84df-839497d3472c"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\"",
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My CultPass card was declined and I'm not sure why - can you help me with this?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "6235772b-4e21-47f9-89b2-33a69cc348ab",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 2,
+      "retrieval_context": [
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.5
+    },
+    {
+      "input": "My CultPass access is temporarily paused and I'm not sure why - can you help me sort this out?",
+      "expected_article_id": "6235772b-4e21-47f9-89b2-33a69cc348ab",
+      "retrieved_article_ids": [
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "6235772b-4e21-47f9-89b2-33a69cc348ab",
+        "c5f010d9-4000-42b4-a137-758a85920227"
+      ],
+      "expected_rank": 2,
+      "retrieval_context": [
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.5
+    },
+    {
+      "input": "I attended a CultPass event with reservation ID [reservation_id], but my monthly quota in the app didn't update. Can you check why?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "ecb045cf-bb41-4164-84df-839497d3472c"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My monthly quota didn't update after I attended an event, even though my reservation shows 'attended'. Why is that?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My reservation RES-12345 shows as attended, but my quota still hasn't updated. Can you check this for me?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "774687aa-4080-405e-b253-d17ad9384ec5",
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\"",
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My reservation_id is RES-12345, and my CultPass quota hasn't updated since I joined the event. Can you check it for me?",
+      "expected_article_id": "69287824-4b92-45cf-9870-64129fef1f0d",
+      "retrieved_article_ids": [
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Why does an experience show 'No Slots Available' when I try to book?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [
+        "774687aa-4080-405e-b253-d17ad9384ec5",
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I'm trying to book an experience in the app, but it says 'No Slots Available.' Why is that happening?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [
+        "774687aa-4080-405e-b253-d17ad9384ec5",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "ecb045cf-bb41-4164-84df-839497d3472c"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Why does the CultPass app show 'No Slots Available' when I try to reserve an experience?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [
+        "774687aa-4080-405e-b253-d17ad9384ec5",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Why am I seeing 'No Slots Available' for a premium event on CultPass?",
+      "expected_article_id": "774687aa-4080-405e-b253-d17ad9384ec5",
+      "retrieved_article_ids": [
+        "774687aa-4080-405e-b253-d17ad9384ec5",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I'm trying to change my email address in the CultPass app but I can't figure out where to go.",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "How can I update my phone number on my profile in CultPass?",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "69287824-4b92-45cf-9870-64129fef1f0d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I updated my email in CultPass under 'My Account' > 'Profile Settings', and it says it may need verification. Why is that?",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+        "c5f010d9-4000-42b4-a137-758a85920227"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: How to Handle Login Issues?\n\nMost login issues are resolved with password reset:\n\n- Ask the user to tap 'Forgot Password' on the login screen\n- Ensure they are using the correct registered email\n- If they did not receive the reset email, check spam folder or retry after 10 minutes\n- For persistent login issues, escalate to human support\n\n**Suggested phrasing:**\n\"Try tapping 'Forgot Password' on the login screen. Make sure you're using the email associated with your account. If the email doesn't arrive, check spam or try again in a few minutes.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My CultPass profile is locked in Profile Settings, and I can't change my phone number. Can you help?",
+      "expected_article_id": "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+      "retrieved_article_ids": [
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "c5f010d9-4000-42b4-a137-758a85920227"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "How do I reserve a spot for an event using the CultPass app?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "How can I reserve a spot for an event on CultPass?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I tapped Reserve in the CultPass app to book an event, but haven't received a reservation confirmation email—can you check?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "69287824-4b92-45cf-9870-64129fef1f0d",
+        "a884508e-a40a-4279-8564-4911e08770c9"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I booked an event in the CultPass app and want to check if my QR code is ready. Can you help me check?",
+      "expected_article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "retrieved_article_ids": [
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I can't log into my CultPass account.",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "c5f010d9-4000-42b4-a137-758a85920227"
+      ],
+      "expected_rank": null,
+      "retrieval_context": [
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\""
+      ],
+      "hit_at_3": 0.0,
+      "top_1_accuracy": 0.0,
+      "reciprocal_rank_at_3": 0.0
+    },
+    {
+      "input": "Why am I not getting the password reset email?",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [
+        "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Handle Login Issues?\n\nMost login issues are resolved with password reset:\n\n- Ask the user to tap 'Forgot Password' on the login screen\n- Ensure they are using the correct registered email\n- If they did not receive the reset email, check spam folder or retry after 10 minutes\n- For persistent login issues, escalate to human support\n\n**Suggested phrasing:**\n\"Try tapping 'Forgot Password' on the login screen. Make sure you're using the email associated with your account. If the email doesn't arrive, check spam or try again in a few minutes.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Hi, I tapped 'Forgot Password' on the login screen but haven't received the reset email. Can you help?",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [
+        "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe",
+        "6235772b-4e21-47f9-89b2-33a69cc348ab"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Handle Login Issues?\n\nMost login issues are resolved with password reset:\n\n- Ask the user to tap 'Forgot Password' on the login screen\n- Ensure they are using the correct registered email\n- If they did not receive the reset email, check spam folder or retry after 10 minutes\n- For persistent login issues, escalate to human support\n\n**Suggested phrasing:**\n\"Try tapping 'Forgot Password' on the login screen. Make sure you're using the email associated with your account. If the email doesn't arrive, check spam or try again in a few minutes.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\"",
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I still can't log in to CultPass even after using the correct registered email. Can you help me get back in?",
+      "expected_article_id": "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+      "retrieved_article_ids": [
+        "8b3d1cd4-6f82-470f-a72e-8f57ab643341",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Handle Login Issues?\n\nMost login issues are resolved with password reset:\n\n- Ask the user to tap 'Forgot Password' on the login screen\n- Ensure they are using the correct registered email\n- If they did not receive the reset email, check spam folder or retry after 10 minutes\n- For persistent login issues, escalate to human support\n\n**Suggested phrasing:**\n\"Try tapping 'Forgot Password' on the login screen. Make sure you're using the email associated with your account. If the email doesn't arrive, check spam or try again in a few minutes.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I'm wondering what actually comes with a CultPass subscription each month — how many cultural experiences do I get, and what kinds of events can I use them for?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "c5f010d9-4000-42b4-a137-758a85920227"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Do concerts and museums both count as part of the 4 cultural experiences I get each month?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I have a CultPass subscription and thought music concerts were included, but my premium experience is asking for an additional fee. Can you check reservation RES-12345?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My CultPass subscription says 4 cultural experiences per month, and I want to use one for a film screening. Can you help me with that?",
+      "expected_article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "retrieved_article_ids": [
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "1be3671a-14e4-4dc8-aedd-7a260ad58907",
+        "1c949b11-d3b4-40e6-9c55-665833b6d54d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: How to Request a Refund\n\nRefunds for CultPass are limited:\n\n- Refunds are only issued for duplicate charges, technical issues, or service outages\n- Do NOT approve refunds unless authorized\n- Collect transaction ID and last 4 digits of card\n- Escalate cases that match refund policy\n\n**Suggested phrasing:**\n\"Refunds are reviewed on a case-by-case basis. Could you share the transaction ID and last 4 digits of the card used? I will check this for you.\"",
+        "Title: Region or City Not Supported\n\nIf a user doesn't see experiences in their area:\n\n- Explain that CultPass availability varies by region\n- Suggest entering a different nearby city in the app\n- Confirm they allowed location permissions\n- If their city is newly added but empty, escalate\n\n**Suggested phrasing:**\n\"CultPass experiences vary by region. Try enabling location services or selecting a nearby city in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I'm trying to use my CultPass QR code but it won't scan.",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My entry QR code in the CultPass app won't scan. Can you help?",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "My CultPass entry QR code won't scan. Can you help me look into it?",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I keep failing to scan a screenshot of my QR code—could the screenshot be the problem?",
+      "expected_article_id": "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+      "retrieved_article_ids": [
+        "b485bd71-a7fa-492f-8a21-575ba99a9fa7",
+        "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Troubleshooting QR Code Not Scanning\n\nIf a user can't scan their entry QR code:\n\n- Ensure brightness is high and QR is fully visible\n- Ask if they took a screenshot (these sometimes fail); recommend opening the live QR in the app\n- Confirm they arrived at the right venue and time\n- If attendance cannot be verified, contact event support\n\n**Suggested phrasing:**\n\"Try increasing your screen brightness and opening the live QR within the app instead of a screenshot. Let me know if it still doesn’t scan.\"",
+        "Title: How to Reserve a Spot for an Event\n\nIf a user asks how to reserve an event:\n\n- Guide them to the CultPass app\n- Instruct them to browse the experience catalog and tap 'Reserve'\n- If it's a premium or limited event, check if reservation confirmation is required via email\n- Remind them to arrive at least 15 minutes early with their QR code visible\n\n**Suggested phrasing:**\n\"You can reserve an experience by opening the CultPass app, selecting your desired event, and tapping 'Reserve'. Be sure to arrive 15 minutes early with your QR code ready.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I can't figure out how to cancel my CultPass subscription.",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [
+        "c5f010d9-4000-42b4-a137-758a85920227",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "4cb3ae0a-6746-4e70-b3dd-a46bc79e6474"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Why an Experience Was Cancelled by the Organizer\n\nIf an event is cancelled:\n\n- Inform the user that organizers may cancel due to low attendance, weather, or venue issues\n- Reassure them that no quota will be deducted\n- Suggest alternative events or rescheduling options\n- For recurring cancellations, escalate\n\n**Suggested phrasing:**\n\"This event was cancelled by the organizer due to unforeseen circumstances. Your quota remains unaffected, and you're welcome to book another experience.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Can I just pause my subscription for a while instead?",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [
+        "c5f010d9-4000-42b4-a137-758a85920227",
+        "6235772b-4e21-47f9-89b2-33a69cc348ab",
+        "a884508e-a40a-4279-8564-4911e08770c9"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\"",
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I paused my subscription in Manage Plan on the CultPass app, will it resume automatically when I reactivate it?",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [
+        "c5f010d9-4000-42b4-a137-758a85920227",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "00d48632-d803-4c00-a17f-ba3a50e80ecc"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Troubleshooting App Crashes or Freezes\n\nIf a user reports that the CultPass app is crashing:\n\n- Ask them to force close the app and relaunch\n- Confirm they are on the latest app version (App Store or Google Play)\n- Suggest clearing app cache (Android) or rebooting the device\n- If the problem persists, collect device model + OS version and escalate\n\n**Suggested phrasing:**\n\"Please try closing and reopening the app, and make sure you're on the latest version. If the issue continues, let me know your device model and OS version so I can help further.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I canceled my CultPass subscription from My Account, and it says it will stay active until the end of my billing cycle, is that normal?",
+      "expected_article_id": "c5f010d9-4000-42b4-a137-758a85920227",
+      "retrieved_article_ids": [
+        "c5f010d9-4000-42b4-a137-758a85920227",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "78267d8e-2908-4f6c-8e80-344b8ddb04fe"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: How to Cancel or Pause a Subscription\n\nUsers can manage their subscription via the app > 'My Account' > 'Manage Plan'.\n\n- Cancel: Effective at the end of the billing cycle\n- Pause: Preserves user data, resumes automatically when reactivated\n- Do NOT offer refunds unless approved by support lead\n\n**Suggested phrasing:**\n\"You can cancel or pause your subscription at any time via the 'My Account' section in the CultPass app. Cancelation takes effect at the end of your billing cycle.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: How to Update Email or Personal Information\n\nUsers can update their profile details in the CultPass app:\n\n- Go to 'My Account' > 'Profile Settings'\n- Edit fields like email, phone number, or name\n- If the email is updated, remind them verification may be required\n- For locked profiles or repeated failures, escalate\n\n**Suggested phrasing:**\n\"You can update your email or personal details by visiting 'My Account' > 'Profile Settings' in the CultPass app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I'm booking a premium event through the app—can you explain what the extra fee is?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "Does my normal monthly membership cover premium events with exclusive access or limited seats, or do I have to pay extra for those at checkout in the app?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "774687aa-4080-405e-b253-d17ad9384ec5"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Why an Experience Shows 'No Slots Available'\n\nIf a user cannot reserve an experience due to unavailable slots:\n\n- Explain that popular events fill quickly\n- Suggest choosing another time slot or similar experience\n- If it's a premium event, remind them it may have limited seating\n- Inform them to check back later as slots may reopen after cancellations\n\n**Suggested phrasing:**\n\"This event is currently full, but slots may reopen if others cancel. You can also explore similar experiences in the app.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I was charged an extra fee for a Premium experience even though my normal monthly quota should apply—can you check?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "69287824-4b92-45cf-9870-64129fef1f0d"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Monthly Quota Not Updating After Attendance\n\nIf a user attended an event but their quota didn't update:\n\n- Confirm the reservation status marked as 'attended'\n- Check for sync delays (up to 30 minutes)\n- Ask them to refresh the app or log out and back in\n- If still incorrect, escalate with reservation_id\n\n**Suggested phrasing:**\n\"Sometimes quotas update with a slight delay. Please try refreshing the app. If it still looks incorrect, share your reservation ID so I can review.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "input": "I'm trying to get exclusive access to a Premium event, but it's asking for additional payment—can you explain that?",
+      "expected_article_id": "ecb045cf-bb41-4164-84df-839497d3472c",
+      "retrieved_article_ids": [
+        "ecb045cf-bb41-4164-84df-839497d3472c",
+        "a884508e-a40a-4279-8564-4911e08770c9",
+        "6235772b-4e21-47f9-89b2-33a69cc348ab"
+      ],
+      "expected_rank": 1,
+      "retrieval_context": [
+        "Title: Understanding Premium Experiences\n\nSome experiences require additional payment:\n\n- Premium events offer exclusive access or limited seats\n- Costs are shown clearly before reservation\n- Users can pay through the app at checkout\n- Normal monthly quota does not apply\n\n**Suggested phrasing:**\n\"Premium experiences may require an extra fee, which you'll see before booking. These events are not deducted from your monthly quota.\"",
+        "Title: What's Included in a CultPass Subscription\n\nEach user is entitled to 4 cultural experiences per month, which may include:\n- Art exhibitions\n- Museum entries\n- Music concerts\n- Film screenings and more\n\nSome premium experiences may require an additional fee (visible in the app).\n\n**Suggested phrasing:**\n\"Your CultPass subscription includes 4 curated experiences each month. You can choose from museums, concerts, film events and more. Premium events may have an extra cost, which is shown during reservation.\"",
+        "Title: Payment Failed or Card Declined\n\nIf a renewal payment fails:\n\n- Ask the user to confirm card details and sufficient balance\n- Suggest adding a new payment method in the app\n- Remind them that access may be temporarily paused until payment succeeds\n- If multiple failures occur, escalate\n\n**Suggested phrasing:**\n\"Your payment didn’t go through. Please verify your card details or try adding a new payment method. Let me know if you need help.\""
+      ],
+      "hit_at_3": 1.0,
+      "top_1_accuracy": 1.0,
+      "reciprocal_rank_at_3": 1.0
+    }
+  ]
+}
