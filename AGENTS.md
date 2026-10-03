@@ -1,5 +1,9 @@
 # 项目代理约束
 
+## 开发环境
+
+进入项目后先执行 `conda activate uda-hub`；所有 Python、pytest 和项目脚本均在该环境中运行。
+
 ## 关键配置留档
 
 更新提示词、`StylingConfig` 等会影响生成结果的关键配置前：
