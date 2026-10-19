@@ -29,6 +29,7 @@ def reject_network(*args, **kwargs):
     raise AssertionError('import attempted network access')
 socket.socket.connect = reject_network
 import agentic.workflow
+import dump_mermaid
 print('offline import OK')
 """
     result = subprocess.run(

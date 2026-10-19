@@ -38,5 +38,5 @@ Blocked by: None
 
 框架能力记录已核对 create_agent、持久 checkpoint、interrupt/Command、middleware 及 ProviderStrategy；DeepSeek Flash Responses API 的结构化输出真实探测通过，v4-pro 未实测。未改提示词、StylingConfig 或默认模型配置。
 
-本票入口与前置能力验收通过；未知的取消状态和活动时区是后续取消预订任务的明确阻碍，不据样本臆定。整仓测试、最终代码审查和提交仍待执行。
+本票入口与前置能力验收通过；未知的取消状态和活动时区是后续取消预订任务的明确阻碍，不据样本臆定。全量 pytest 启动后进入 Qdrant/FastEmbed 权重下载（临时文件约 768 MB，尚未完成），为避免继续下载已中止；不计为全量测试通过。`compileall` 与 `git diff --check` 通过，`pip check` 报环境已有 deepeval 4.2.3 与 click 8.5.0 版本冲突。最终代码审查及提交已完成。
 

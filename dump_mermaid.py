@@ -1,7 +1,7 @@
-from agentic.workflow import orchestrator
+from agentic.workflow import build_workflow
 
 if __name__ == "__main__":
-    graph = orchestrator.get_graph()
+    graph = build_workflow().get_graph()
 
     mermaid = graph.draw_mermaid()
 
