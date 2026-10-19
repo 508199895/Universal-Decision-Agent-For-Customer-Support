@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
 from pathlib import Path
 from typing import Dict, Any, List
@@ -29,7 +28,7 @@ def _build_connections_config() -> Dict[str, Any]:
     Build a canonical multi-server MCP configuration for MCPAdapter.
 
     We use stdio transport and launch each FastMCP server as a subprocess
-    with the current Python interpreter. Qdrant is reached over Streamable HTTP.
+    with the current Python interpreter. The bundled Qdrant server uses stdio.
     """
     return {
         "mcpServers": {
@@ -49,11 +48,9 @@ def _build_connections_config() -> Dict[str, Any]:
                 "args": [str(PROJECT_ROOT / "mcp_services" / "memory" / "server.py")],
             },
             "qdrant": {
-                "transport": "streamable-http",
-                "url": os.getenv(
-                    "QDRANT_MCP_URL",
-                    "http://127.0.0.1:8000/mcp",
-                ),
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [str(PROJECT_ROOT / "mcp_services" / "qdrant" / "server.py")],
             },
         }
     }
@@ -69,6 +66,12 @@ async def aget_client() -> MCPAdapter:
     if _client is None:
         _client = MCPAdapter(_build_connections_config())
     return _client
+
+
+def clear_client() -> None:
+    """Drop the cached adapter after all MCP tool calls have completed."""
+    global _client
+    _client = None
 
 
 def _normalize_text_result(result: Any) -> Any:

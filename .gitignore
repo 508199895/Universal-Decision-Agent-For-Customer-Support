@@ -45,6 +45,30 @@ env/
 # Local FastEmbed model weights (large, machine-specific cache)
 /mcp_services/qdrant/.cache/
 
+# Common local cache and temporary directories
+**/.cache/
+**/tmp/
+**/temp/
+
+# Pytest/evaluation work directories
+**/.pytest-temp-*/
+**/.pytest_tmp_*/
+
+# Local agent scratch work, including task specs and test evidence
+/.scratch/
+
+# Local wiki import staging area (source files are maintained in the wiki)
+/.wiki-ingest/
+
+# Local documentation and runtime logs
+/docs/
+/logs/
+
+# Root-level local Markdown notes (subdirectories remain unaffected)
+/*.md
+!/README.md
+/AGENTS.md
+
 
 
 

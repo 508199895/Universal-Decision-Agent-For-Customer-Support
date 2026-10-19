@@ -1,12 +1,15 @@
 from __future__ import annotations
+import atexit
 import os
 import json
 import re
 from typing import Any, Dict, List, Optional, TypedDict
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from functools import lru_cache, partial
 import asyncio
+from concurrent.futures import Future
+from threading import Event, Lock, Thread, current_thread
 from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI
@@ -24,6 +27,84 @@ from agentic.agents.supervisor_agent import build_supervisor_agent
 from logger import get_logger
 
 log = get_logger()
+
+
+class _ApplicationEventLoop:
+    """Run synchronous ticket requests on one application-owned event loop."""
+
+    def __init__(self) -> None:
+        self.loop = asyncio.new_event_loop()
+        self._ready = Event()
+        self._lock = Lock()
+        self._accepting = True
+        self._pending: set[Future] = set()
+        self._thread = Thread(
+            target=self._run,
+            name="uda-application-event-loop",
+            daemon=True,
+        )
+        self._thread.start()
+        if not self._ready.wait(timeout=10):
+            raise RuntimeError("Application event loop failed to start.")
+
+    def _run(self) -> None:
+        asyncio.set_event_loop(self.loop)
+        self._ready.set()
+        self.loop.run_forever()
+        pending = asyncio.all_tasks(self.loop)
+        for task in pending:
+            task.cancel()
+        if pending:
+            self.loop.run_until_complete(
+                asyncio.gather(*pending, return_exceptions=True)
+            )
+        self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+        self.loop.run_until_complete(self.loop.shutdown_default_executor())
+        self.loop.close()
+
+    def run(self, coroutine: Coroutine[Any, Any, Any]):
+        with self._lock:
+            if not self._accepting:
+                coroutine.close()
+                raise RuntimeError("Application event loop is shutting down.")
+            future = asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+            self._pending.add(future)
+        try:
+            return future.result()
+        finally:
+            with self._lock:
+                self._pending.discard(future)
+
+    def close(self, cleanup_coroutine) -> None:
+        if current_thread() is self._thread:
+            raise RuntimeError("Application event loop cannot close itself.")
+        with self._lock:
+            self._accepting = False
+            pending = list(self._pending)
+        for future in pending:
+            try:
+                future.result()
+            except Exception:
+                # Ticket errors are returned to their callers; shutdown still drains them.
+                pass
+        try:
+            asyncio.run_coroutine_threadsafe(cleanup_coroutine, self.loop).result()
+        finally:
+            self.loop.call_soon_threadsafe(self.loop.stop)
+            self._thread.join()
+
+
+_application_loop: _ApplicationEventLoop | None = None
+_application_loop_lock = Lock()
+_default_model: BaseChatModel | None = None
+
+
+def _get_application_loop() -> _ApplicationEventLoop:
+    global _application_loop
+    with _application_loop_lock:
+        if _application_loop is None:
+            _application_loop = _ApplicationEventLoop()
+        return _application_loop
 
 
 # State schema
@@ -55,6 +136,7 @@ class WorkflowDependencies:
 
 def _default_dependencies() -> WorkflowDependencies:
     """Preserve legacy configuration, loading services only on explicit use."""
+    global _default_model
     from agentic.tools.knowledge_client import aget_kb_tools
     from agentic.tools.account_client import (
         get_account_get_user_tool, get_account_get_user_reservations_tool,
@@ -71,6 +153,7 @@ def _default_dependencies() -> WorkflowDependencies:
         base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         temperature=float(os.getenv("DEEPSEEK_TEMPERATURE", "0")),
     )
+    _default_model = model
     return WorkflowDependencies(
         model=model,
         kb_tools=aget_kb_tools,
@@ -738,12 +821,89 @@ def _default_workflow():
     return build_workflow()
 
 
+async def _close_default_resources() -> None:
+    """Close the default model's clients while the application loop is alive."""
+    model = _default_model
+    if model is None:
+        return
+
+    errors = []
+    async_client = getattr(model, "root_async_client", None)
+    if async_client is not None:
+        try:
+            await async_client.close()
+        except Exception as error:
+            errors.append(error)
+
+    sync_client = getattr(model, "root_client", None)
+    if sync_client is not None:
+        try:
+            sync_client.close()
+        except Exception as error:
+            errors.append(error)
+
+    if len(errors) == 1:
+        raise errors[0]
+    if errors:
+        raise ExceptionGroup("Failed to close default model clients", errors)
+
+
+def close_default_runtime() -> None:
+    """Drain default ticket work, close clients, then stop the shared event loop."""
+    global _application_loop, _default_model
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        raise RuntimeError(
+            "close_default_runtime() is synchronous; call it outside an event loop."
+        )
+
+    with _application_loop_lock:
+        application_loop = _application_loop
+        try:
+            if application_loop is not None:
+                application_loop.close(_close_default_resources())
+            elif _default_model is not None:
+                asyncio.run(_close_default_resources())
+        finally:
+            _default_workflow.cache_clear()
+            from agentic.tools.mcp_client import clear_client
+
+            # MCP tools open and release their own session per invocation. Clearing
+            # this adapter cache drops references after in-flight ticket work drains.
+            clear_client()
+            _default_model = None
+            _application_loop = None
+
+
+def _close_default_runtime_at_exit() -> None:
+    try:
+        close_default_runtime()
+    except Exception:
+        log.exception("application_runtime_shutdown_error")
+
+
+atexit.register(_close_default_runtime_at_exit)
+
+
 def run_ticket(ticket: Dict[str, Any], thread_id: str, *, workflow=None) -> TicketState:
     """
-    Run the LangGraph workflow for a single ticket.
+    Run one ticket on the process-wide event loop used by the synchronous API.
+
+    Async callers should use ``await arun_ticket(...)`` with a caller-owned workflow.
     """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        raise RuntimeError("run_ticket() cannot run inside an event loop; use arun_ticket().")
+
+    application_loop = _get_application_loop()
     workflow = workflow if workflow is not None else _default_workflow()
-    return asyncio.run(arun_ticket(ticket, thread_id, workflow=workflow))
+    return application_loop.run(arun_ticket(ticket, thread_id, workflow=workflow))
 
 
 async def arun_ticket(ticket: Dict[str, Any], thread_id: str, *, workflow) -> TicketState:

@@ -32,7 +32,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from agentic.workflow import run_ticket
+from agentic.workflow import close_default_runtime, run_ticket
 from logger import get_logger
 
 log = get_logger()
@@ -239,12 +239,15 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.mode == "demo":
-        run_single_ticket_demo()
-    elif args.mode == "chat":
-        interactive_chat_loop()
-    else:
-        raise ValueError(f"Unknown mode: {args.mode}")
+    try:
+        if args.mode == "demo":
+            run_single_ticket_demo()
+        elif args.mode == "chat":
+            interactive_chat_loop()
+        else:
+            raise ValueError(f"Unknown mode: {args.mode}")
+    finally:
+        close_default_runtime()
 
 
 if __name__ == "__main__":

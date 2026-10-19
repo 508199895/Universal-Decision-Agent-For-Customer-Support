@@ -40,6 +40,110 @@ print('offline import OK')
     assert "offline import OK" in result.stdout
 
 
+def test_sync_ticket_runs_reuse_the_application_event_loop(monkeypatch):
+    import agentic.workflow as workflow_module
+
+    class AsyncClient:
+        closed_loop = None
+
+        async def close(self):
+            self.closed_loop = asyncio.get_running_loop()
+
+    class SyncClient:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    class LoopBoundWorkflow:
+        loops = []
+
+        async def ainvoke(self, initial_state, config):
+            current_loop = asyncio.get_running_loop()
+            if self.loops and self.loops[-1].is_closed():
+                raise RuntimeError("Event loop is closed")
+            self.loops.append(current_loop)
+            return initial_state
+
+    cached_workflow = LoopBoundWorkflow()
+    async_client = AsyncClient()
+    sync_client = SyncClient()
+    workflow_module._default_model = type(
+        "DefaultModelResources", (),
+        {"root_async_client": async_client, "root_client": sync_client},
+    )()
+    monkeypatch.setattr(workflow_module, "_default_workflow", lambda: cached_workflow)
+
+    try:
+        first = workflow_module.run_ticket({"ticket_id": "ticket-a"}, "ticket-a")
+        second = workflow_module.run_ticket({"ticket_id": "ticket-b"}, "ticket-b")
+    finally:
+        monkeypatch.undo()
+        close_runtime = getattr(workflow_module, "close_default_runtime", None)
+        if close_runtime is not None:
+            close_runtime()
+
+    assert first["ticket"]["ticket_id"] == "ticket-a"
+    assert second["ticket"]["ticket_id"] == "ticket-b"
+    assert len(cached_workflow.loops) == 2
+    assert cached_workflow.loops[0] is cached_workflow.loops[1]
+    assert async_client.closed_loop is cached_workflow.loops[0]
+    assert sync_client.closed
+    assert cached_workflow.loops[0].is_closed()
+
+
+def test_application_loop_closes_coroutine_when_shutting_down():
+    from agentic.workflow import _ApplicationEventLoop
+
+    application_loop = _ApplicationEventLoop()
+
+    async def pending():
+        return None
+
+    coroutine = pending()
+    application_loop._accepting = False
+    try:
+        try:
+            application_loop.run(coroutine)
+        except RuntimeError as error:
+            assert "shutting down" in str(error)
+        else:
+            raise AssertionError("shutting down loop accepted a coroutine")
+        assert coroutine.cr_frame is None
+    finally:
+        application_loop.loop.call_soon_threadsafe(application_loop.loop.stop)
+        application_loop._thread.join()
+
+
+def test_default_resource_cleanup_closes_sync_client_after_async_error(monkeypatch):
+    import agentic.workflow as workflow_module
+
+    class AsyncClient:
+        async def close(self):
+            raise ValueError("async close failed")
+
+    class SyncClient:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    sync_client = SyncClient()
+    model = type("DefaultModelResources", (), {
+        "root_async_client": AsyncClient(), "root_client": sync_client,
+    })()
+    monkeypatch.setattr(workflow_module, "_default_model", model)
+
+    try:
+        asyncio.run(workflow_module._close_default_resources())
+    except ValueError as error:
+        assert "async close failed" in str(error)
+    else:
+        raise AssertionError("async close error was swallowed")
+
+    assert sync_client.closed
+
+
 def test_run_and_reload_ticket_with_injected_dependencies(tmp_path):
     from agentic.workflow import WorkflowDependencies, arun_ticket, build_workflow
 

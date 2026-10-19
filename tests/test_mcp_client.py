@@ -8,19 +8,16 @@ from langchain_core.tools import StructuredTool
 from agentic.tools import mcp_client
 
 
-def test_connections_config_targets_mcp_v2_stack(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("QDRANT_MCP_URL", "http://qdrant-mcp.test/mcp")
-
+def test_connections_config_launches_bundled_qdrant_server() -> None:
     config = mcp_client._build_connections_config()
     servers = config["mcpServers"]
 
     assert set(servers) == {"kb", "account", "memory", "qdrant"}
     assert servers["kb"]["command"] == sys.executable
     assert servers["qdrant"] == {
-        "transport": "streamable-http",
-        "url": "http://qdrant-mcp.test/mcp",
+        "transport": "stdio",
+        "command": sys.executable,
+        "args": [str(mcp_client.PROJECT_ROOT / "mcp_services" / "qdrant" / "server.py")],
     }
 
 
