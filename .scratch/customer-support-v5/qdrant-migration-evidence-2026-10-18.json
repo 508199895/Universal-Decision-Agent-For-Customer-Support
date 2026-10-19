@@ -1,0 +1,55 @@
+{
+  "query": "How do I reserve a spot for an event with CultPass?",
+  "tool": "qdrant_qdrant-find",
+  "arguments_schema": {
+    "query": {
+      "description": "What to search for",
+      "type": "string"
+    },
+    "collection_name": {
+      "description": "The collection to search in",
+      "type": "string"
+    }
+  },
+  "raw_type": "str",
+  "retrieved_count": 3,
+  "articles": [
+    {
+      "article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+      "metadata": {
+        "article_id": "8a68f705-8ff5-4f26-88af-cd0539fbd85f",
+        "account_id": "cultpass",
+        "title": "How to Reserve a Spot for an Event",
+        "tags": "reservation, events, booking, attendance",
+        "created_at": "2025-12-03T21:50:04",
+        "relevance_score": 9.058030128479004
+      },
+      "content_length": 553
+    },
+    {
+      "article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+      "metadata": {
+        "article_id": "a884508e-a40a-4279-8564-4911e08770c9",
+        "account_id": "cultpass",
+        "title": "What's Included in a CultPass Subscription",
+        "tags": "subscription, benefits, pricing, access",
+        "created_at": "2025-12-03T21:50:04",
+        "relevance_score": 0.2069408893585205
+      },
+      "content_length": 517
+    },
+    {
+      "article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+      "metadata": {
+        "article_id": "1c949b11-d3b4-40e6-9c55-665833b6d54d",
+        "account_id": "cultpass",
+        "title": "Region or City Not Supported",
+        "tags": "region, location, availability, app",
+        "created_at": "2025-12-03T21:50:04",
+        "relevance_score": -2.994873046875
+      },
+      "content_length": 423
+    }
+  ],
+  "writes_executed": false
+}

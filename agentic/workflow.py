@@ -3,44 +3,24 @@ import os
 import json
 import re
 from typing import Any, Dict, List, Optional, TypedDict
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from functools import lru_cache, partial
 import asyncio
 from dotenv import load_dotenv
 
-load_dotenv()
-
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DEEPSEEK_BASE_URL = os.getenv(
-    "DEEPSEEK_BASE_URL",
-    "https://api.deepseek.com",
-)
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-DEEPSEEK_TEMPERATURE = float(os.getenv("DEEPSEEK_TEMPERATURE", "0"))
-
-if not DEEPSEEK_API_KEY:
-    raise ValueError("DEEPSEEK_API_KEY is missing.")
-
 from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.types import RunnableConfig
 
 from agentic.agents.intake_agent import build_intake_agent
 from agentic.agents.classifier_agent import build_classifier_agent
 from agentic.agents.escalation_agent import build_escalation_agent
 from agentic.agents.supervisor_agent import build_supervisor_agent
-from agentic.tools.knowledge_client import (
-    get_kb_search_tool,  
-    aget_kb_tools,
-)
-from agentic.tools.account_client import (
-    get_account_get_user_tool,
-    get_account_get_user_reservations_tool,
-)
-from agentic.tools.memory_client import (
-    get_memory_write_tool,
-    get_memory_search_tool,
-)
-
 from logger import get_logger
 
 log = get_logger()
@@ -61,25 +41,44 @@ class TicketState(TypedDict, total=False):
     supervisor: Dict[str, Any]
 
 
-# Global models & tools
+@dataclass(frozen=True)
+class WorkflowDependencies:
+    """External boundaries; None tools are disabled, not resolved globally."""
 
-LLM = ChatOpenAI(
-    model=DEEPSEEK_MODEL,
-    api_key=DEEPSEEK_API_KEY,
-    base_url=DEEPSEEK_BASE_URL,
-    temperature=DEEPSEEK_TEMPERATURE,
-)
+    model: BaseChatModel
+    kb_tools: Callable[[], Awaitable[List[BaseTool]]]
+    account_get_user: BaseTool | None = None
+    account_get_reservations: BaseTool | None = None
+    memory_write: BaseTool | None = None
+    memory_search: BaseTool | None = None
 
-INTAKE_AGENT = build_intake_agent(model=LLM)
-CLASSIFIER_AGENT = build_classifier_agent(model=LLM)
-ESCALATION_AGENT = build_escalation_agent(model=LLM)
-SUPERVISOR_AGENT = build_supervisor_agent(model=LLM)
 
-#KB_SEARCH_TOOL = get_kb_search_tool()
-ACCOUNT_GET_USER_TOOL = get_account_get_user_tool()
-ACCOUNT_GET_RESERVATIONS_TOOL = get_account_get_user_reservations_tool()
-MEMORY_WRITE_TOOL = get_memory_write_tool()
-MEMORY_SEARCH_TOOL = get_memory_search_tool()
+def _default_dependencies() -> WorkflowDependencies:
+    """Preserve legacy configuration, loading services only on explicit use."""
+    from agentic.tools.knowledge_client import aget_kb_tools
+    from agentic.tools.account_client import (
+        get_account_get_user_tool, get_account_get_user_reservations_tool,
+    )
+    from agentic.tools.memory_client import get_memory_write_tool, get_memory_search_tool
+
+    load_dotenv()
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY is missing.")
+    model = ChatOpenAI(
+        model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        api_key=api_key,
+        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+        temperature=float(os.getenv("DEEPSEEK_TEMPERATURE", "0")),
+    )
+    return WorkflowDependencies(
+        model=model,
+        kb_tools=aget_kb_tools,
+        account_get_user=get_account_get_user_tool(),
+        account_get_reservations=get_account_get_user_reservations_tool(),
+        memory_write=get_memory_write_tool(),
+        memory_search=get_memory_search_tool(),
+    )
 
 
 # helper to extract IDs for logging
@@ -101,7 +100,7 @@ def _ids_for_log(state: TicketState, config: RunnableConfig | None = None) -> Di
 
 
 # Node implementations
-def intake_node(state: TicketState, config: RunnableConfig) -> TicketState:
+def intake_node(state: TicketState, config: RunnableConfig, *, agent) -> TicketState:
     """
     Normalize the ticket and extract a summary, sentiment, etc.
     """
@@ -109,7 +108,7 @@ def intake_node(state: TicketState, config: RunnableConfig) -> TicketState:
     log.info("node_start_intake", extra={"extra_data": ids})
 
     ticket = state["ticket"]
-    result = INTAKE_AGENT.invoke(
+    result = agent.invoke(
         {
             "ticket_content": ticket.get("content", ""),
             "channel": ticket.get("channel", "unknown"),
@@ -132,7 +131,7 @@ def intake_node(state: TicketState, config: RunnableConfig) -> TicketState:
     return {"intake": result}
 
 
-def classifier_node(state: TicketState, config: RunnableConfig) -> TicketState:
+def classifier_node(state: TicketState, config: RunnableConfig, *, agent) -> TicketState:
     """
     Classify issue type, urgency, complexity, and whether it likely needs escalation.
     """
@@ -142,7 +141,7 @@ def classifier_node(state: TicketState, config: RunnableConfig) -> TicketState:
     ticket = state["ticket"]
     intake = state["intake"]
 
-    result = CLASSIFIER_AGENT.invoke(
+    result = agent.invoke(
         {
             "ticket_content": ticket.get("content", ""),
             "normalized_issue": intake.get("normalized_issue", ""),
@@ -166,7 +165,9 @@ def classifier_node(state: TicketState, config: RunnableConfig) -> TicketState:
     )
     return {"classification": result}
 
-async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketState:
+async def resolver_node(
+    state: TicketState, config: RunnableConfig, *, dependencies: WorkflowDependencies,
+) -> TicketState:
     """
     Resolver node (agent):
 
@@ -212,7 +213,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
     kb_tool = None
     if kb_query:
         try:
-            tools = await aget_kb_tools()
+            tools = await dependencies.kb_tools()
             for t in tools:
                 if "kb_search" in t.name:
                     kb_tool = t
@@ -363,7 +364,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
     # Account lookup for personalization (async)
     account_snippet = ""
 
-    if external_user_id and ACCOUNT_GET_USER_TOOL is not None:
+    if external_user_id and dependencies.account_get_user is not None:
         log.info(
             "tool_call_account_get_user_start",
             extra={
@@ -374,7 +375,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
                 }
             },
         )
-        user_info = await ACCOUNT_GET_USER_TOOL.ainvoke(
+        user_info = await dependencies.account_get_user.ainvoke(
             {"external_user_id": external_user_id}
         )
         log.info(
@@ -390,7 +391,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
         if user_info:
             account_snippet += f"User profile: {user_info}\n\n"
 
-    if external_user_id and ACCOUNT_GET_RESERVATIONS_TOOL is not None:
+    if external_user_id and dependencies.account_get_reservations is not None:
         log.info(
             "tool_call_account_get_reservations_start",
             extra={
@@ -401,7 +402,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
                 }
             },
         )
-        reservations = await ACCOUNT_GET_RESERVATIONS_TOOL.ainvoke(
+        reservations = await dependencies.account_get_reservations.ainvoke(
             {"external_user_id": external_user_id}
         )
         log.info(
@@ -419,7 +420,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
 
     # Long-term memory search (async)
     memory_snippet = ""
-    if external_user_id and MEMORY_SEARCH_TOOL is not None:
+    if external_user_id and dependencies.memory_search is not None:
         log.info(
             "tool_call_memory_search_start",
             extra={
@@ -431,7 +432,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
                 }
             },
         )
-        memories = await MEMORY_SEARCH_TOOL.ainvoke(
+        memories = await dependencies.memory_search.ainvoke(
             {
                 "external_user_id": external_user_id,
                 "query": user_issue,
@@ -530,7 +531,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
         "Just explain what the user should do or what we can do for them."
     )
 
-    llm_resp = await LLM.ainvoke(
+    llm_resp = await dependencies.model.ainvoke(
         [
             ("system", system_prompt),
             ("human", user_prompt),
@@ -570,9 +571,9 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
     )
 
     # Write long-term memory (best-effort)
-    if external_user_id and MEMORY_WRITE_TOOL is not None:
+    if external_user_id and dependencies.memory_write is not None:
         try:
-            await MEMORY_WRITE_TOOL.ainvoke(
+            await dependencies.memory_write.ainvoke(
                 {
                     "external_user_id": external_user_id,
                     "ticket_id": ticket_id,
@@ -591,7 +592,7 @@ async def resolver_node(state: TicketState, config: RunnableConfig) -> TicketSta
     return {"resolution": resolution}
 
 
-def escalation_node(state: TicketState, config: RunnableConfig) -> TicketState:
+def escalation_node(state: TicketState, config: RunnableConfig, *, agent) -> TicketState:
     """
     Prepare a structured escalation summary for a human agent.
     """
@@ -605,7 +606,7 @@ def escalation_node(state: TicketState, config: RunnableConfig) -> TicketState:
 
     resolver_notes = resolution.get("notes_for_human") if resolution else None
 
-    result = ESCALATION_AGENT.invoke(
+    result = agent.invoke(
         {
             "ticket_content": ticket.get("content", ""),
             "intake_summary": intake.get("summary", ""),
@@ -628,7 +629,7 @@ def escalation_node(state: TicketState, config: RunnableConfig) -> TicketState:
     return {"escalation": result}
 
 
-def supervisor_node(state: TicketState, config: RunnableConfig) -> TicketState:
+def supervisor_node(state: TicketState, config: RunnableConfig, *, agent) -> TicketState:
     """
     Decide the next step: 'resolver', 'escalation', or 'done'.
     """
@@ -639,7 +640,7 @@ def supervisor_node(state: TicketState, config: RunnableConfig) -> TicketState:
     classification = state.get("classification", {})
     resolution = state.get("resolution", {})
 
-    result = SUPERVISOR_AGENT.invoke(
+    result = agent.invoke(
         {
             "summary": intake.get("summary", ""),
             "issue_type": classification.get("issue_type", "other"),
@@ -687,14 +688,29 @@ def route_from_supervisor(state: TicketState) -> str:
 
 # Build and compile workflow
 
-def build_workflow():
+def build_workflow(
+    *, dependencies: WorkflowDependencies | None = None,
+    checkpointer: BaseCheckpointSaver | None = None,
+):
+    dependencies = dependencies if dependencies is not None else _default_dependencies()
     graph = StateGraph(TicketState)
 
-    graph.add_node("intake", intake_node)
-    graph.add_node("classifier", classifier_node)
-    graph.add_node("supervisor", supervisor_node)
-    graph.add_node("resolver", resolver_node)
-    graph.add_node("escalation", escalation_node)
+    graph.add_node(
+        "intake", partial(intake_node, agent=build_intake_agent(model=dependencies.model))
+    )
+    graph.add_node(
+        "classifier",
+        partial(classifier_node, agent=build_classifier_agent(model=dependencies.model)),
+    )
+    graph.add_node(
+        "supervisor",
+        partial(supervisor_node, agent=build_supervisor_agent(model=dependencies.model)),
+    )
+    graph.add_node("resolver", partial(resolver_node, dependencies=dependencies))
+    graph.add_node(
+        "escalation",
+        partial(escalation_node, agent=build_escalation_agent(model=dependencies.model)),
+    )
 
     graph.add_edge(START, "intake")
     graph.add_edge("intake", "classifier")
@@ -712,18 +728,26 @@ def build_workflow():
         },
     )
 
-    memory = MemorySaver()
+    memory = checkpointer if checkpointer is not None else MemorySaver()
     app = graph.compile(checkpointer=memory)
     return app
 
 
-orchestrator = build_workflow()
+@lru_cache(maxsize=1)
+def _default_workflow():
+    return build_workflow()
 
 
-def run_ticket(ticket: Dict[str, Any], thread_id: str) -> TicketState:
+def run_ticket(ticket: Dict[str, Any], thread_id: str, *, workflow=None) -> TicketState:
     """
     Run the LangGraph workflow for a single ticket.
     """
+    workflow = workflow if workflow is not None else _default_workflow()
+    return asyncio.run(arun_ticket(ticket, thread_id, workflow=workflow))
+
+
+async def arun_ticket(ticket: Dict[str, Any], thread_id: str, *, workflow) -> TicketState:
+    """Run with caller-owned dependencies and checkpointer lifecycle."""
     initial_state: TicketState = {
         "ticket": ticket,
     }
@@ -744,7 +768,7 @@ def run_ticket(ticket: Dict[str, Any], thread_id: str) -> TicketState:
         },
     )
 
-    final_state = asyncio.run(orchestrator.ainvoke(initial_state, config=config))
+    final_state = await workflow.ainvoke(initial_state, config=config)
 
     # Log final resolution object
     resolution = (final_state or {}).get("resolution", {})
@@ -761,3 +785,17 @@ def run_ticket(ticket: Dict[str, Any], thread_id: str) -> TicketState:
     )
 
     return final_state
+
+
+async def aresume_ticket(thread_id: str, *, workflow, reply: Any = None) -> TicketState:
+    """Resume the original graph; never create a replacement ticket or checkpoint."""
+    from langgraph.types import Command
+
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+    snapshot = await workflow.aget_state(config)
+    if not snapshot.values:
+        raise ValueError("No checkpoint exists for this ticket.")
+    if not snapshot.next:
+        raise ValueError("Ticket is not waiting for a reply.")
+    payload = Command(resume=reply) if reply is not None else None
+    return await workflow.ainvoke(payload, config=config)
