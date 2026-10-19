@@ -42,6 +42,9 @@ env/
 .pytest_cache/
 */.pytest_cache/
 
+# Local FastEmbed model weights (large, machine-specific cache)
+/mcp_services/qdrant/.cache/
+
 
 
 
