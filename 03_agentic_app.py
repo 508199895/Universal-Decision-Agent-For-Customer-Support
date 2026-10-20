@@ -1,11 +1,11 @@
 """
 03_agentic_app.py
 
-Entry point for running the Universal Decision Agent (UDA) Hub multi-agent workflow from the command line.
+Entry point for exercising the current V5 handoff workflow from the command line.
 
 This script:
 - Loads environment variables (including OPENAI_API_KEY) from .env
-- Imports the LangGraph workflow orchestrator via `run_ticket`
+- Imports the V5 handoff graph via `run_ticket`
 - Emits structured JSON logs via logger.get_logger() to stdout and logs/uda_hub.jsonl
 - Provides:
     * a simple single-ticket demo (`demo` mode)
@@ -32,6 +32,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+from agentic.handoff import HANDOFF_NOTICE
 from agentic.workflow import close_default_runtime, run_ticket
 from logger import get_logger
 
@@ -55,12 +56,9 @@ def pretty_print_section(title: str, content: Any) -> None:
 
 def run_single_ticket_demo() -> None:
     """
-    Run the full workflow for a single, hard-coded CultPass ticket.
+    Run the current handoff-only V5 workflow for a sample ticket.
 
-    This is useful to verify that:
-    - The databases are set up
-    - MCP tools can be called
-    - The multi-agent graph runs end-to-end
+    This verifies database setup and dialogue-based handoff generation.
     """
     # NOTE: owner_id should match an external_user_id in cultpass_users.jsonl
     ticket: Dict[str, Any] = {
@@ -69,7 +67,7 @@ def run_single_ticket_demo() -> None:
         "owner_name": "Demo User",
         "channel": "chat",
         "tags": "login, access",
-        "ticket_id": "DEMO-TICKET-001",
+        "ticket_id": f"DEMO-TICKET-{uuid.uuid4().hex[:8]}",
     }
 
     # Structured log: ticket received
@@ -88,10 +86,6 @@ def run_single_ticket_demo() -> None:
     print("\nRunning UDA-Hub workflow for a demo ticket...")
     final_state = run_ticket(ticket, thread_id=ticket["ticket_id"])
 
-    intake = final_state.get("intake") or {}
-    classification = final_state.get("classification") or {}
-    supervisor = final_state.get("supervisor") or {}
-    resolution = final_state.get("resolution") or {}
     escalation = final_state.get("escalation") or {}
 
     # Structured log: supervisor decision + resolution summary
@@ -100,23 +94,15 @@ def run_single_ticket_demo() -> None:
         extra={
             "extra_data": {
                 "ticket_id": ticket["ticket_id"],
-                "issue_type": classification.get("issue_type"),
-                "urgency": classification.get("urgency"),
-                "complexity": classification.get("complexity"),
-                "supervisor_next_step": supervisor.get("next_step"),
-                "resolution_status": resolution.get("status"),
-                "resolution_confidence": resolution.get("confidence"),
-                "has_escalation": bool(escalation),
+                "ticket_status": final_state.get("ticket", {}).get("status"),
+                "has_handoff_material": bool(escalation),
             }
         },
     )
 
     pretty_print_section("Ticket", ticket)
-    pretty_print_section("Intake Agent Output", intake)
-    pretty_print_section("Classifier Agent Output", classification)
-    pretty_print_section("Supervisor Decision", supervisor)
-    pretty_print_section("Resolution", resolution)
-    pretty_print_section("Escalation (if any)", escalation)
+    pretty_print_section("交接摘要", escalation.get("summary"))
+    pretty_print_section("交接描述", escalation.get("description"))
 
 
 def interactive_chat_loop() -> None:
@@ -127,8 +113,7 @@ def interactive_chat_loop() -> None:
     We call the workflow once per ticket, print the final resolution, and then
     prompt again until the user types 'exit' or 'quit'.
 
-    This is NOT a streaming chat with the user; it's a "one ticket at a time"
-    experience, which matches the project rubric (ticket-based processing).
+    This is not a streaming chat; each run exercises one ticket lifecycle.
     """
     print(
         textwrap.dedent(
@@ -139,7 +124,7 @@ def interactive_chat_loop() -> None:
             Type 'exit' or 'quit' to stop.
 
             Example:
-              I want to cancel my CultPass subscription but don't see the option in the app.
+              I want help cancelling my CultPass subscription.
             """
         )
     )
@@ -180,11 +165,7 @@ def interactive_chat_loop() -> None:
         print(f"\n[Processing ticket {ticket_id}...]")
         final_state = run_ticket(ticket, thread_id=ticket_id)
 
-        intake = final_state.get("intake") or {}
-        classification = final_state.get("classification") or {}
-        supervisor = final_state.get("supervisor") or {}
-        resolution = final_state.get("resolution") or {}
-        escalation = final_state.get("escalation")
+        escalation = final_state.get("escalation") or {}
 
         # Structured log: CLI result
         log.info(
@@ -192,48 +173,30 @@ def interactive_chat_loop() -> None:
             extra={
                 "extra_data": {
                     "ticket_id": ticket_id,
-                    "issue_type": classification.get("issue_type"),
-                    "urgency": classification.get("urgency"),
-                    "complexity": classification.get("complexity"),
-                    "supervisor_next_step": supervisor.get("next_step"),
-                    "resolution_status": resolution.get("status"),
-                    "resolution_confidence": resolution.get("confidence"),
-                    "has_escalation": bool(escalation),
+                    "ticket_status": final_state.get("ticket", {}).get("status"),
+                    "has_handoff_material": bool(escalation),
                 }
             },
         )
 
         print("\n--- Result ---")
-        print(f"Supervisor next_step: {supervisor.get('next_step')}")
-        print(f"Resolution status:   {resolution.get('status')}")
-        print(f"Confidence:          {resolution.get('confidence')}")
-        print("\nAnswer to user:\n")
-        print(textwrap.fill(resolution.get("answer", "[no answer produced]"), width=80))
-
-        if escalation:
-            print("\n[Escalation prepared for human agent]")
-            print("Summary for human:")
-            print(
-                textwrap.fill(
-                    escalation.get("summary_for_human", ""),
-                    width=80,
-                )
-            )
+        print(f"Ticket status: {final_state.get('ticket', {}).get('status')}")
+        print(HANDOFF_NOTICE)
 
 
 # CLI
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run the UDA-Hub multi-agent ticket workflow."
+        description="Run the current UDA-Hub V5 handoff workflow."
     )
     parser.add_argument(
         "--mode",
         choices=["demo", "chat"],
         default="demo",
         help=(
-            "demo = run a single hard-coded ticket\n"
-            "chat = enter an interactive loop and process one ticket per input"
+            "demo = run a single handoff example\n"
+            "chat = enter tickets for handoff testing"
         ),
     )
 

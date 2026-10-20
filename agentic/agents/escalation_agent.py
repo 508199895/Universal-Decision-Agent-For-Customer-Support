@@ -13,12 +13,12 @@ def build_escalation_agent(*, model: BaseChatModel) -> Runnable:
 
     system = (
         "You are the Escalation Agent for UDA-Hub.\n"
-        "Prepare a structured handoff summary for a human agent.\n\n"
-        "You MUST return JSON with:\n"
-        "  - summary_for_human\n"
-        "  - recommended_department\n"
-        "  - proposed_next_steps\n"
-        "  - include_prior_resolution_notes (true/false)\n\n"
+        "Read the customer-support conversation and prepare exactly two handoff fields.\n"
+        "summary: a concise summary of the customer's request and current outcome.\n"
+        "description: a concrete account of relevant conversation, evidence, attempted handling, "
+        "known or unresolved business facts, and why human help is needed.\n"
+        "Use only facts present in the conversation; preserve uncertainty and do not invent details.\n\n"
+        'Return JSON with exactly these keys: "summary" and "description".\n'
         "Return ONLY valid JSON."
     )
 
@@ -27,11 +27,7 @@ def build_escalation_agent(*, model: BaseChatModel) -> Runnable:
             ("system", system),
             (
                 "human",
-                "Ticket content: {ticket_content}\n"
-                "Intake summary: {intake_summary}\n"
-                "Sentiment: {sentiment}\n"
-                "Classification: {classification}\n"
-                "Resolver notes: {resolver_notes}\n\n"
+                "Full ticket conversation:\n{conversation}\n\n"
                 "Return ONLY JSON."
             ),
         ]

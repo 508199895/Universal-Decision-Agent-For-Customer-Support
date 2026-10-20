@@ -51,11 +51,13 @@ env/
 **/temp/
 
 # Pytest/evaluation work directories
+**/.pytest-*/
 **/.pytest-temp-*/
 **/.pytest_tmp_*/
 
 # Local agent scratch work, including task specs and test evidence
 /.scratch/
+/.archify/
 
 # Local wiki import staging area (source files are maintained in the wiki)
 /.wiki-ingest/

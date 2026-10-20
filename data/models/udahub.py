@@ -1,6 +1,8 @@
 import enum
 from sqlalchemy import (
     Column,
+    Boolean,
+    Integer,
     String,
     Text,
     DateTime,
@@ -74,6 +76,8 @@ class TicketMetadata(Base):
     __tablename__ = 'ticket_metadata'
     ticket_id = Column(String, ForeignKey('tickets.ticket_id'), primary_key=True)
     status = Column(String, nullable=False)
+    processing_status = Column(String, nullable=False, default='pending')
+    checkpoint_initialized = Column(Boolean, nullable=False, default=False)
     main_issue_type = Column(String)
     tags = Column(Text)
     created_at = Column(DateTime, default=func.now())
@@ -105,6 +109,15 @@ class TicketMessage(Base):
     def __repr__(self):
         short_content = (self.content[:30] + "...") if self.content and len(self.content) > 30 else self.content
         return f"<TicketMessage(message_id='{self.message_id}', role='{self.role.name}', content='{short_content}')>"
+
+
+class TicketMessageEvent(Base):
+    __tablename__ = 'ticket_message_events'
+    event_id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column(String, ForeignKey('tickets.ticket_id'), nullable=False)
+    event_type = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(String, nullable=False)
 
 
 class Knowledge(Base):
