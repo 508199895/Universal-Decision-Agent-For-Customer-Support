@@ -25,6 +25,8 @@ from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.types import RunnableConfig
 
 from agentic.agents.escalation_agent import build_escalation_agent
+from agentic.agents.customer_support_agent import build_customer_support_agent
+from agentic.capabilities.support_toolset import acollect_support_tools
 from agentic.orchestration.handoff import build_handoff_messages
 from agentic.data.tickets.message_journal import TicketJournal
 from agentic.data.tickets.ticket_store import TicketEventStore, TicketPersistenceError
@@ -185,12 +187,23 @@ async def persistent_workflow(database: str | os.PathLike, *, dependencies=None,
 
 @asynccontextmanager
 async def default_workflow_runtime():
-    """Open the application's default ticket store and workflow for one async session."""
+    """Validate and assemble the static support agent before opening the CLI runtime."""
     event_store = TicketEventStore(_default_agent_database())
-    async with persistent_workflow(
-        event_store.database, ticket_event_store=event_store,
-    ) as workflow:
-        yield workflow, event_store
+    dependencies = _default_dependencies()
+    try:
+        support_tools = await acollect_support_tools()
+        # The V6 conversational workflow is introduced by the following workflow
+        # slice; assemble its agent here so tool/configuration errors fail at startup.
+        _support_agent = build_customer_support_agent(
+            model=dependencies.model, tools=support_tools,
+        )
+        async with persistent_workflow(
+            event_store.database, dependencies=dependencies,
+            ticket_event_store=event_store,
+        ) as workflow:
+            yield workflow, event_store
+    finally:
+        await _close_model_clients(dependencies.model)
 
 
 async def _close_model_clients(model: BaseChatModel) -> None:
