@@ -15,11 +15,14 @@ from agentic.orchestration import workflow
 def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypatch):
     checkpointers = []
     support_agents = []
+    workflow_agents = []
     graph = object()
     monkeypatch.setattr(
         workflow,
         "build_workflow",
-        lambda **kwargs: checkpointers.append(kwargs["checkpointer"]) or graph,
+        lambda **kwargs: checkpointers.append(kwargs["checkpointer"])
+        or workflow_agents.append(kwargs.get("support_agent"))
+        or graph,
     )
     monkeypatch.setattr(workflow, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
     monkeypatch.setattr(
@@ -31,7 +34,7 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
     monkeypatch.setattr(
         workflow,
         "build_customer_support_agent",
-        lambda **kwargs: support_agents.append(kwargs) or object(),
+        lambda **kwargs: support_agents.append({**kwargs, "agent": object()}) or support_agents[-1]["agent"],
     )
 
     async def exercise_runtime():
@@ -42,6 +45,7 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
             assert isinstance(checkpointers[0], AsyncSqliteSaver)
             assert len(support_agents) == 1
             assert support_agents[0]["tools"] == ("tool",)
+            assert workflow_agents == [support_agents[0]["agent"]]
 
     asyncio.run(exercise_runtime())
 

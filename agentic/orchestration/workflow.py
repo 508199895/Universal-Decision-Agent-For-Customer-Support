@@ -136,8 +136,9 @@ async def escalation_node(state: WorkflowState, config: RunnableConfig, *, agent
 
 
 def build_workflow(*, checkpointer: BaseCheckpointSaver, ticket_event_store: TicketEventStore,
-                   dependencies: WorkflowDependencies | None = None, agent=None):
-    """Compile the handoff workflow with a shared-state escalation subgraph."""
+                   dependencies: WorkflowDependencies | None = None, agent=None,
+                   support_agent=None):
+    """Compile the support and handoff workflow with shared message state."""
     if checkpointer is None or ticket_event_store is None:
         raise ValueError("workflow requires a durable checkpointer and TicketEventStore")
     if agent is None:
@@ -154,7 +155,12 @@ def build_workflow(*, checkpointer: BaseCheckpointSaver, ticket_event_store: Tic
 
     graph = StateGraph(WorkflowState)
     graph.add_node("escalation", escalation_graph)
-    graph.add_edge(START, "escalation")
+    if support_agent is not None:
+        graph.add_node("customer_support", support_agent)
+        graph.add_edge(START, "customer_support")
+        graph.add_edge("customer_support", "escalation")
+    else:
+        graph.add_edge(START, "escalation")
     graph.add_edge("escalation", END)
     return graph.compile(checkpointer=checkpointer)
 
@@ -165,7 +171,8 @@ def _default_agent_database() -> Path:
 
 @asynccontextmanager
 async def persistent_workflow(database: str | os.PathLike, *, dependencies=None, agent=None,
-                              ticket_event_store: TicketEventStore | None = None):
+                              ticket_event_store: TicketEventStore | None = None,
+                              support_agent=None):
     """Open a workflow and keep its saver alive for the context lifetime."""
     store = ticket_event_store or TicketEventStore(database)
     owns_dependencies = dependencies is None and agent is None
@@ -179,6 +186,7 @@ async def persistent_workflow(database: str | os.PathLike, *, dependencies=None,
                 ticket_event_store=store,
                 dependencies=active_dependencies,
                 agent=agent,
+                support_agent=support_agent,
             )
     finally:
         if owns_dependencies:
@@ -192,14 +200,13 @@ async def default_workflow_runtime():
     dependencies = _default_dependencies()
     try:
         support_tools = await acollect_support_tools()
-        # The V6 conversational workflow is introduced by the following workflow
-        # slice; assemble its agent here so tool/configuration errors fail at startup.
         _support_agent = build_customer_support_agent(
             model=dependencies.model, tools=support_tools,
         )
         async with persistent_workflow(
             event_store.database, dependencies=dependencies,
             ticket_event_store=event_store,
+            support_agent=_support_agent,
         ) as workflow:
             yield workflow, event_store
     finally:

@@ -10,8 +10,8 @@ from langchain_core.tools import BaseTool
 from agentic.integrations.mcp.client import aget_tools_for_servers
 
 
-# These are the current Qdrant RAG search and account query capabilities.
-# Legacy KB MCP and Qdrant administration tools are not customer-facing tools.
+# Memory and Qdrant administration tools are intentionally not part of the
+# customer-facing agent; customer knowledge is retrieved through Qdrant find.
 REQUIRED_SUPPORT_TOOL_NAMES = frozenset(
     {
         "qdrant_qdrant-find",
