@@ -1,6 +1,6 @@
-from agentic.workflow import build_workflow
+from agentic.orchestration.workflow import build_workflow
 from langgraph.checkpoint.memory import MemorySaver
-from agentic.ticket_store import TicketStore
+from agentic.data.tickets.ticket_store import TicketEventStore
 
 
 class DiagramAgent:
@@ -10,7 +10,7 @@ class DiagramAgent:
 if __name__ == "__main__":
     graph = build_workflow(
         checkpointer=MemorySaver(),
-        ticket_store=TicketStore(":memory:"),
+        ticket_event_store=TicketEventStore(":memory:"),
         agent=DiagramAgent(),
     ).get_graph()
 

@@ -153,7 +153,7 @@ Qdrant 运行于 `http://localhost:6333`，版本为 1.19.1。Collection 状态�
 
 - Golden 数据：[`datasets/retrieval_goldens.jsonl`](datasets/retrieval_goldens.jsonl)
 - 最终 DeepEval 结果：[`results/qdrant_retrieval_20260920T113048Z.json`](results/qdrant_retrieval_20260920T113048Z.json)
-- DeepEval 评估脚本：[`evaluate_qdrant_retrieval.py`](evaluate_qdrant_retrieval.py)
+- DeepEval 评估脚本：[`evaluate_qdrant_retrieval.py`](../retrieval/evaluate_qdrant_retrieval.py)
 - Qdrant 混合检索实现：[`mcp-server-qdrant/src/mcp_server_qdrant/qdrant.py`](../../mcp-server-qdrant/src/mcp_server_qdrant/qdrant.py)
 - FastEmbed 实现：[`mcp-server-qdrant/src/mcp_server_qdrant/embeddings/fastembed.py`](../../mcp-server-qdrant/src/mcp_server_qdrant/embeddings/fastembed.py)
 

@@ -2,7 +2,7 @@ import json
 import pytest
 from typing import Any, Dict, List
 
-from agentic.tools.knowledge_client import aget_kb_tools
+from agentic.capabilities.tools.knowledge_client import aget_kb_tools
 
 
 async def _get_kb_search_tool():

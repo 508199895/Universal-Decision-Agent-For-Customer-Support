@@ -2,7 +2,7 @@ import json
 import pytest
 from typing import Any, Dict
 
-from agentic.tools.account_client import aget_account_tools
+from agentic.capabilities.tools.account_client import aget_account_tools
 
 
 def _get_default_cultpass_user() -> Dict[str, Any]:

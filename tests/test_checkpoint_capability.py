@@ -1,4 +1,4 @@
-"""Dependency capability check, not acceptance of the V5 business workflow."""
+"""Dependency capability check, not acceptance of the business workflow."""
 
 import json
 import subprocess

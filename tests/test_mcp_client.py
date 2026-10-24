@@ -5,7 +5,7 @@ import sys
 import pytest
 from langchain_core.tools import StructuredTool
 
-from agentic.tools import mcp_client
+from agentic.integrations.mcp import client as mcp_client
 
 
 def test_connections_config_launches_bundled_qdrant_server() -> None:

@@ -8,7 +8,7 @@
 
 1. 将修改前的四个字段完整记录到本文件：`scenario`、`task`、`input_format`、`expected_output_format`。
 2. 记录版本号、日期、生成通道、修改原因和对应结果副本。
-3. 更新 `evals/generate_retrieval_goldens.py` 中的 `STYLING_CONFIG_VERSION`。
+3. 更新 `evals/retrieval/generate_retrieval_goldens.py` 中的 `STYLING_CONFIG_VERSION`。
 4. 更新或新增测试，确保关键提示词内容与通道共享关系符合预期。
 5. 运行测试后再生成数据。
 6. 每次成功生成时保留：

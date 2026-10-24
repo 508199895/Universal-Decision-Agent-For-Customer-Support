@@ -1,4 +1,4 @@
-"""Strict V5 state initialization and authorized patch merging."""
+"""Workflow state initialization, validation, and authorized patch merging."""
 
 from __future__ import annotations
 
@@ -6,16 +6,17 @@ from copy import deepcopy
 from typing import Any
 import uuid
 
+from langchain.agents import AgentState
+
 
 class StateContractError(ValueError):
-    """Raised when state data violates the V5 contract or writer boundary."""
+    """Raised when state data violates the workflow contract or writer boundary."""
 
 
 GROUP_DEFAULTS: dict[str, dict[str, Any]] = {
     "ticket": {
         "ticket_id": None,
         "status": "processing",
-        "messages": [],
         "input": "",
         "owner_id": None,
         "owner_name": None,
@@ -64,7 +65,7 @@ ENUMS = {
 }
 
 WRITERS: dict[str, dict[str, set[str]]] = {
-    "entry": {"ticket": {"messages", "input"}},
+    "entry": {"ticket": {"input"}},
     "supervisor": {"supervisor": {"intent", "intent_version", "next_node", "query_instruction", "message"}},
     "query": {"query": {"answer", "description", "evidence", "next_node"}},
     "clarify": {"clarify": {"prompt"}},
@@ -88,18 +89,30 @@ WRITERS: dict[str, dict[str, set[str]]] = {
 }
 
 
+class WorkflowState(AgentState):
+    ticket: dict[str, Any]
+    supervisor: dict[str, Any]
+    query: dict[str, Any]
+    clarify: dict[str, Any]
+    confirm: dict[str, Any]
+    account: dict[str, Any]
+    validate: dict[str, Any]
+    escalation: dict[str, Any]
+    budget: dict[str, Any]
+
+
 def initial_state(
     *, ticket_id: str, owner_id: str, owner_name: str | None, message: Any,
-) -> dict[str, dict[str, Any]]:
+) -> dict[str, Any]:
     if not isinstance(ticket_id, str) or not ticket_id.strip():
         raise StateContractError("ticket_id must be a non-empty string")
     if not isinstance(owner_id, str) or not owner_id:
         raise StateContractError("owner_id must be a string")
     state = deepcopy(GROUP_DEFAULTS)
     _ensure_message_id(message)
+    state["messages"] = [message]
     state["ticket"].update(
         ticket_id=ticket_id,
-        messages=[message],
         input=_message_text(message),
         owner_id=owner_id,
         owner_name=owner_name,
@@ -144,12 +157,14 @@ def merge_patch(
 
 
 def validate_state(state: Any) -> None:
-    if not isinstance(state, dict) or set(state) != set(GROUP_DEFAULTS):
-        raise StateContractError("state must contain exactly the nine V5 groups")
+    expected_keys = set(GROUP_DEFAULTS) | {"messages"}
+    if not isinstance(state, dict) or set(state) != expected_keys:
+        raise StateContractError("state must contain the messages field and all workflow groups")
+    _validate_messages(state["messages"])
     for group, fields in GROUP_DEFAULTS.items():
         value = state[group]
         if not isinstance(value, dict) or set(value) != set(fields):
-            raise StateContractError(f"{group} must contain exactly its V5 fields")
+            raise StateContractError(f"{group} must contain exactly its declared fields")
         for field, item in value.items():
             _validate_field(group, field, item)
     if state["account"]["status"] != "pending" and not state["account"]["description"]:
@@ -180,15 +195,6 @@ def _validate_field(group: str, field: str, value: Any) -> None:
             raise StateContractError(f"{group}.{field} must be a non-empty string")
         if value is not None and (not isinstance(value, str) or (not value.strip() and field != "input")):
             raise StateContractError(f"{group}.{field} must be a non-empty string or null")
-    elif (group, field) == ("ticket", "messages"):
-        if not isinstance(value, list) or any(
-            not (
-                isinstance(message.get("id"), str) and message["id"].strip()
-            ) if isinstance(message, dict) else not (
-                isinstance(getattr(message, "id", None), str) and getattr(message, "id", "").strip()
-            ) for message in value
-        ):
-            raise StateContractError("ticket.messages must be native messages with stable IDs")
     elif (group, field) == ("query", "validated") or group == "validate" and field in {
         "context_relevance", "faithfulness", "answer_relevance",
     }:
@@ -220,6 +226,17 @@ def _validate_evidence(value: Any) -> None:
             raise StateContractError("invalid evidence source_type")
         if any(not isinstance(entry[key], str) or not entry[key].strip() for key in ("source_ref", "content")):
             raise StateContractError("evidence source_ref and content must be non-empty strings")
+
+
+def _validate_messages(messages: Any) -> None:
+    if not isinstance(messages, list) or any(
+        not (
+            isinstance(message.get("id"), str) and message["id"].strip()
+        ) if isinstance(message, dict) else not (
+            isinstance(getattr(message, "id", None), str) and getattr(message, "id", "").strip()
+        ) for message in messages
+    ):
+        raise StateContractError("messages must be native messages with stable IDs")
 
 
 def _validate_pending_action(value: Any) -> None:

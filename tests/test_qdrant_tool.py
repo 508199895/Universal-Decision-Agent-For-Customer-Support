@@ -1,6 +1,6 @@
 import pytest
 
-from agentic.tools.qdrant_client import aget_qdrant_tools
+from agentic.capabilities.tools.qdrant_client import aget_qdrant_tools
 
 
 async def _get_qdrant_tool_by_name_fragment(fragment: str):

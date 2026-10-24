@@ -98,7 +98,7 @@ Reranker：`BAAI/bge-reranker-base`
 ```powershell
 conda activate uda-hub
 $env:QDRANT_MCP_URL = "http://127.0.0.1:8000/mcp"
-python evals/evaluate_qdrant_retrieval.py --skip-ingest
+python evals/retrieval/evaluate_qdrant_retrieval.py --skip-ingest
 ```
 
 本次评估固定使用 Top-3，并统计：
@@ -248,7 +248,7 @@ Sigmoid 只改变显示尺度，不改变排序，而且转换后的值仍不是
 - 旧 RRF 评估结果：[`results/qdrant_retrieval_20260920T113048Z.json`](results/qdrant_retrieval_20260920T113048Z.json)
 - 新 RRF + reranker 评估结果：[`results/qdrant_retrieval_20260927T125958Z.json`](results/qdrant_retrieval_20260927T125958Z.json)
 - 旧分路分析报告：[`deepeval分析结果.md`](deepeval分析结果.md)
-- DeepEval 评估脚本：[`evaluate_qdrant_retrieval.py`](evaluate_qdrant_retrieval.py)
+- DeepEval 评估脚本：[`evaluate_qdrant_retrieval.py`](../retrieval/evaluate_qdrant_retrieval.py)
 - Qdrant 检索实现：[`mcp-server-qdrant/src/mcp_server_qdrant/qdrant.py`](../../mcp-server-qdrant/src/mcp_server_qdrant/qdrant.py)
 - FastEmbed reranker 实现：[`mcp-server-qdrant/src/mcp_server_qdrant/embeddings/fastembed.py`](../../mcp-server-qdrant/src/mcp_server_qdrant/embeddings/fastembed.py)
 

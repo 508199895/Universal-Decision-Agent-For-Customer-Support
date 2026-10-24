@@ -1,216 +1,133 @@
 import sqlite3
-from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
 
 import pytest
+from typing_extensions import is_typeddict
+from langchain.agents import AgentState
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.graph import END, START, StateGraph
 
-from agentic.ticket_store import (
+from agentic.data.tickets.ticket_store import (
     TicketAlreadyTerminal,
+    TicketEventStore,
     TicketHistoryConflict,
-    TicketStore,
 )
-from agentic.v5_state import StateContractError, initial_state, merge_patch
+from agentic.orchestration.workflow_state import (
+    StateContractError,
+    WorkflowState,
+    initial_state,
+    merge_patch,
+)
 
 
-def make_database(path):
-    connection = sqlite3.connect(path)
-    connection.executescript(
-        """
-        PRAGMA foreign_keys = ON;
-        CREATE TABLE accounts (account_id TEXT PRIMARY KEY, account_name TEXT NOT NULL);
-        CREATE TABLE users (
-            user_id TEXT PRIMARY KEY, account_id TEXT NOT NULL,
-            external_user_id TEXT NOT NULL, user_name TEXT NOT NULL,
-            UNIQUE (account_id, external_user_id),
-            FOREIGN KEY(account_id) REFERENCES accounts(account_id)
-        );
-        CREATE TABLE tickets (
-            ticket_id TEXT PRIMARY KEY, account_id TEXT NOT NULL, user_id TEXT NOT NULL,
-            channel TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(account_id) REFERENCES accounts(account_id),
-            FOREIGN KEY(user_id) REFERENCES users(user_id)
-        );
-        CREATE TABLE ticket_metadata (
-            ticket_id TEXT PRIMARY KEY, status TEXT NOT NULL, main_issue_type TEXT,
-            tags TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(ticket_id) REFERENCES tickets(ticket_id)
-        );
-        CREATE TABLE ticket_messages (
-            message_id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL,
-            role TEXT NOT NULL, content TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(ticket_id) REFERENCES tickets(ticket_id)
-        );
-        INSERT INTO accounts VALUES ('acct', 'Test');
-        INSERT INTO users VALUES ('user-1', 'acct', 'external-1', 'One');
-        INSERT INTO users VALUES ('user-2', 'acct', 'external-2', 'Two');
-        """
+def test_ticket_schema_contains_only_the_six_business_fields(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+
+    connection = sqlite3.connect(database)
+    ticket_columns = [row[1] for row in connection.execute("PRAGMA table_info(tickets)")]
+    event_columns = [row[1] for row in connection.execute("PRAGMA table_info(ticket_events)")]
+    connection.close()
+
+    assert ticket_columns == [
+        "ticket_id", "user_id", "status", "tokens", "created_at", "updated_at",
+    ]
+    assert event_columns == [
+        "event_id", "user_id", "ticket_id", "seq", "event_type", "category",
+        "content", "metadata", "created_at",
+    ]
+    assert store.thread_id("user-1") == "user-1"
+
+
+def test_ticket_creation_persists_first_message_atomically_and_allows_multiple_active_tickets(tmp_path):
+    store = TicketEventStore(tmp_path / "agent.sqlite")
+    first = store.create_ticket(
+        ticket_id="ticket-1", user_id="user-1", status="pending",
+        initial_message=HumanMessage(content="first", id="message-1").model_dump(),
+        initial_metadata={"owner_id": "external-1", "owner_name": "One"},
     )
-    connection.commit()
-    connection.close()
-
-
-def test_concurrent_entry_reuses_one_database_ticket(tmp_path):
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    store = TicketStore(database)
-    store.ensure_constraints()
-    barrier = Barrier(2)
-
-    def enter(index):
-        barrier.wait()
-        return TicketStore(database).acquire_or_create(
-            "external-1", account_id="acct", channel=f"channel-{index}",
-        )
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        records = list(executor.map(enter, range(2)))
-
-    assert records[0].ticket_id == records[1].ticket_id
-    assert sum(record.created for record in records) == 1
-    connection = sqlite3.connect(database)
-    assert connection.execute(
-        "SELECT COUNT(*) FROM tickets WHERE user_id='user-1'"
-    ).fetchone()[0] == 1
-    connection.close()
-
-
-def test_duplicate_active_history_is_reported_without_mutation(tmp_path):
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    connection = sqlite3.connect(database)
-    for ticket_id in ("old-1", "old-2"):
-        connection.execute(
-            "INSERT INTO tickets (ticket_id, account_id, user_id, channel) VALUES (?, 'acct', 'user-1', 'chat')",
-            (ticket_id,),
-        )
-        connection.execute(
-            "INSERT INTO ticket_metadata (ticket_id, status) VALUES (?, 'open')", (ticket_id,),
-        )
-    connection.commit()
-    connection.close()
-
-    store = TicketStore(database)
-    with pytest.raises(TicketHistoryConflict, match="multiple active tickets"):
-        store.acquire_or_create("external-1", account_id="acct")
-
-    connection = sqlite3.connect(database)
-    assert connection.execute(
-        "SELECT ticket_id, status FROM ticket_metadata ORDER BY ticket_id"
-    ).fetchall() == [("old-1", "open"), ("old-2", "open")]
-    connection.close()
-
-
-def test_missing_metadata_and_unknown_status_are_rejected(tmp_path):
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    connection = sqlite3.connect(database)
-    connection.execute(
-        "INSERT INTO tickets (ticket_id, account_id, user_id, channel) VALUES ('missing', 'acct', 'user-1', 'chat')"
+    second = store.create_ticket(
+        ticket_id="ticket-2", user_id="user-1", status="pending",
+        initial_message=HumanMessage(content="second", id="message-2").model_dump(),
     )
-    connection.commit()
-    connection.close()
-    with pytest.raises(TicketHistoryConflict, match="no metadata"):
-        TicketStore(database).acquire_or_create("external-1", account_id="acct")
+
+    assert first.created and second.created
+    assert first.status == second.status == "pending"
+    assert [event["seq"] for event in store.events(user_id="user-1")] == [1, 2, 3, 4]
+    assert [event["event_type"] for event in store.events(user_id="user-1", ticket_id="ticket-1")] == [
+        "ticket.created", "ticket.message.received",
+    ]
+    first_message = store.events(user_id="user-1", ticket_id="ticket-1")[1]
+    assert first_message["content"]["id"] == "message-1"
+    assert first_message["metadata"]["owner_id"] == "external-1"
 
 
-def test_handoff_material_notification_and_terminal_status_are_atomic(tmp_path):
-    from langchain_core.messages import HumanMessage
-
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    store = TicketStore(database)
-    ticket = store.acquire_or_create("external-1", account_id="acct")
-    state = initial_state(
-        ticket_id=ticket.ticket_id, owner_id="external-1", owner_name="One",
-        message=HumanMessage(content="Need help with my booking", id="request-1"),
+def test_checkpoint_initialization_marker_is_idempotent_and_scoped_to_pending_tickets(tmp_path):
+    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store.create_ticket(
+        ticket_id="ticket-1", user_id="user-1", initial_message={"content": "hello", "id": "m1"},
     )
-    state["account"].update(status="unresolved", description="Cancellation result is unknown")
-    state["budget"].update(outer_nodes_used=3, business_calls_used=1)
-    state["ticket"]["status"] = "handed_off"
-    state["escalation"].update(
-        summary="Customer requested cancellation; the result remains unconfirmed.",
-        description=(
-            "Request: customer requested cancellation. Source: reservation status could not be confirmed. "
-            "Attempt: account check. Result: cancellation remains unknown. Budget: one business call."
-        ),
-    )
-    state["query"]["evidence"] = [{
-        "source_type": "user_state", "source_ref": "reservation:r-1",
-        "content": "Reservation status could not be confirmed",
-    }]
 
-    connection = sqlite3.connect(database)
-    connection.execute(
-        """
-        CREATE TRIGGER fail_notice BEFORE INSERT ON ticket_messages
-        WHEN NEW.content LIKE '%尚未确认人工已接手%'
-        BEGIN SELECT RAISE(ABORT, 'injected message failure'); END
-        """
-    )
-    connection.commit()
-    connection.close()
+    assert store.latest_uninitialized_ticket("user-1").ticket_id == "ticket-1"
+    store.mark_checkpoint_initialized("ticket-1")
+    store.mark_checkpoint_initialized("ticket-1")
+    assert store.checkpoint_initialized("ticket-1")
+    assert store.latest_uninitialized_ticket("user-1") is None
+    assert [event["event_type"] for event in store.events(user_id="user-1")] == [
+        "ticket.created", "ticket.message.received", "checkpoint.initialized",
+    ]
 
-    with pytest.raises(Exception, match="terminal commit failed"):
-        store.commit_handoff(ticket.ticket_id, state=state)
-    assert store.status(ticket.ticket_id) == "processing"
-    connection = sqlite3.connect(database)
-    assert connection.execute(
-        "SELECT COUNT(*) FROM ticket_messages WHERE ticket_id=?", (ticket.ticket_id,),
-    ).fetchone()[0] == 0
-    connection.close()
 
-    connection = sqlite3.connect(database)
-    connection.execute("DROP TRIGGER fail_notice")
-    connection.commit()
-    connection.close()
-    assert store.commit_handoff(ticket.ticket_id, state=state)
-    assert not store.commit_handoff(ticket.ticket_id, state=state)
-    assert store.status(ticket.ticket_id) == "handed_off"
-    connection = sqlite3.connect(database)
-    saved = connection.execute(
-        "SELECT message_id, role, content FROM ticket_messages WHERE ticket_id=? ORDER BY message_id",
-        (ticket.ticket_id,),
-    ).fetchall()
-    assert len(saved) == 2
-    assert {row[1] for row in saved} == {"system"}
-    assert any("交接摘要：Customer requested cancellation" in row[2] for row in saved)
-    assert any("具体描述：Request: customer requested cancellation" in row[2] for row in saved)
-    assert any("尚未确认人工已接手" in row[2] for row in saved)
-    connection.close()
+def test_event_sequence_is_user_scoped_and_event_owner_is_checked(tmp_path):
+    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store.create_ticket(ticket_id="ticket-1", user_id="user-1")
+    store.create_ticket(ticket_id="ticket-2", user_id="user-2")
+    store.append_events([{
+        "user_id": "user-1", "ticket_id": "ticket-1", "event_type": "run.start",
+        "category": "trace", "content": {}, "metadata": {}, "created_at": "2026-10-22T00:00:00Z",
+    }])
+
+    assert [item["seq"] for item in store.events(user_id="user-1")] == [1, 2]
+    assert [item["seq"] for item in store.events(user_id="user-2")] == [1]
+    with pytest.raises(TicketHistoryConflict, match="does not belong"):
+        store.append_events([{
+            "user_id": "user-2", "ticket_id": "ticket-1", "event_type": "run.start",
+            "category": "trace", "content": {}, "metadata": {}, "created_at": "2026-10-22T00:00:01Z",
+        }])
+
+
+def test_ticket_status_and_token_updates_follow_the_new_contract(tmp_path):
+    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
+    store.add_tokens("ticket-1", 12)
+    store.add_tokens("ticket-1", 8)
+    assert store.get_ticket("ticket-1").tokens == 20
+
+    assert store.commit_completed("ticket-1")
+    assert not store.commit_completed("ticket-1")
+    assert store.status("ticket-1") == "completed"
     with pytest.raises(TicketAlreadyTerminal):
-        store.commit_completed(
-            ticket.ticket_id,
-            {"id": "different-final", "type": "ai", "content": "different delivery"},
-        )
+        store.set_status("ticket-1", "running")
 
 
-def test_message_ids_are_stable_and_duplicate_submission_is_idempotent(tmp_path):
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    store = TicketStore(database)
-    ticket = store.acquire_or_create("external-1", account_id="acct")
-    message = {"id": "message-1", "type": "human", "content": "hello"}
-    assert store.append_message(ticket.ticket_id, message) == "message-1"
-    assert store.append_message(ticket.ticket_id, message) == "message-1"
-    connection = sqlite3.connect(database)
-    assert connection.execute(
-        "SELECT COUNT(*) FROM ticket_messages WHERE message_id='message-1'"
-    ).fetchone()[0] == 1
-    connection.close()
-
-
-def test_v5_state_contract_rejects_unknown_fields_and_unauthorized_writes():
-    from langchain_core.messages import HumanMessage
-
+def test_workflow_state_inherits_agent_state_and_keeps_messages_at_the_top_level():
     state = initial_state(
         ticket_id="ticket-1", owner_id="external-1", owner_name=None,
         message=HumanMessage(content="hello", id="message-1"),
     )
-    assert set(state) == {
+
+    assert is_typeddict(WorkflowState)
+    assert set(AgentState.__annotations__) <= set(WorkflowState.__annotations__)
+    assert set(AgentState.__required_keys__) <= WorkflowState.__required_keys__
+    assert "messages" in WorkflowState.__annotations__
+    assert {
         "ticket", "supervisor", "query", "clarify", "confirm", "account",
         "validate", "escalation", "budget",
+    } <= WorkflowState.__required_keys__
+    assert set(state) == {
+        "messages", "ticket", "supervisor", "query", "clarify", "confirm", "account",
+        "validate", "escalation", "budget",
     }
+    assert "messages" not in state["ticket"]
     with pytest.raises(StateContractError, match="unknown fields"):
         merge_patch(state, {"ticket": {"unexpected": "value"}}, writer="boundary")
     with pytest.raises(StateContractError, match="cannot update group ticket"):
@@ -220,22 +137,7 @@ def test_v5_state_contract_rejects_unknown_fields_and_unauthorized_writes():
     assert updated["budget"] == state["budget"]
 
 
-def test_v5_state_contract_rejects_implicit_types_and_invalid_enums():
-    from langchain_core.messages import HumanMessage
-
-    state = initial_state(
-        ticket_id="ticket-1", owner_id="external-1", owner_name=None,
-        message=HumanMessage(content="hello", id="message-1"),
-    )
-    with pytest.raises(StateContractError, match="invalid supervisor.intent"):
-        merge_patch(state, {"supervisor": {"intent": "DONE"}}, writer="supervisor")
-    with pytest.raises(StateContractError, match="non-negative integer"):
-        merge_patch(state, {"budget": {"outer_nodes_used": True}}, writer="boundary")
-
-
-def test_state_patch_retains_untouched_fields_and_explicitly_clears_values():
-    from langchain_core.messages import HumanMessage
-
+def test_state_patch_retains_untouched_fields_and_rejects_invalid_values():
     state = initial_state(
         ticket_id="ticket-1", owner_id="external-1", owner_name=None,
         message=HumanMessage(content="hello", id="message-1"),
@@ -249,80 +151,32 @@ def test_state_patch_retains_untouched_fields_and_explicitly_clears_values():
     assert patched["ticket"]["input"] == "hello"
     assert patched["supervisor"]["query_instruction"] is None
     assert patched["query"]["evidence"] == []
+    with pytest.raises(StateContractError, match="invalid supervisor.intent"):
+        merge_patch(state, {"supervisor": {"intent": "DONE"}}, writer="supervisor")
+    with pytest.raises(StateContractError, match="non-negative integer"):
+        merge_patch(state, {"budget": {"outer_nodes_used": True}}, writer="boundary")
 
 
-def test_deterministic_handoff_includes_required_context_and_fixed_notice():
-    from langchain_core.messages import HumanMessage
-    from agentic.handoff import HANDOFF_NOTICE, build_handoff_messages
-
+def test_compiled_subgraph_shares_parent_agent_state_messages():
     state = initial_state(
         ticket_id="ticket-1", owner_id="external-1", owner_name=None,
-        message=HumanMessage(content="Cancel my reservation", id="message-1"),
-    )
-    state["account"].update(
-        status="unresolved", pending_action={
-            "tool_name": "cancel_reservation", "tool_args": {"reservation_id": "r-1"},
-        }, description="Database connection failed after submit",
-    )
-    state["ticket"]["status"] = "handed_off"
-    state["budget"].update(business_calls_used=2)
-    state["escalation"].update(
-        summary="Cancellation request remains unresolved.",
-        description=(
-            "Request: Cancel my reservation. Source: reservation lookup. Attempt: two business calls. "
-            "Result: unresolved. Budget: business_calls_used=2."
-        ),
-    )
-    first_material, first_notice = build_handoff_messages(state)
-    second_material, second_notice = build_handoff_messages(state)
-    assert first_material.content == second_material.content
-    assert first_material.id == second_material.id
-    assert first_notice.content == second_notice.content == HANDOFF_NOTICE
-    assert "交接摘要：Cancellation request remains unresolved." in first_material.content
-    assert "具体描述：Request: Cancel my reservation." in first_material.content
-    assert "Cancel my reservation" in first_material.content
-    assert "business_calls_used=2" in first_material.content
-
-
-def test_handoff_rejects_incomplete_handoff_state(tmp_path):
-    from langchain_core.messages import HumanMessage
-
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    store = TicketStore(database)
-    ticket = store.acquire_or_create("external-1", account_id="acct")
-    state = initial_state(
-        ticket_id=ticket.ticket_id, owner_id="external-1", owner_name="One",
-        message=HumanMessage(content="Need help", id="request-1"),
-    )
-    with pytest.raises(ValueError, match="handed_off"):
-        store.commit_handoff(ticket.ticket_id, state=state)
-    assert store.status(ticket.ticket_id) == "processing"
-
-
-def test_terminal_core_record_prevents_workflow_reexecution(tmp_path):
-    import asyncio
-    from langchain_core.messages import AIMessage
-    from agentic.workflow import aresume_ticket
-
-    database = tmp_path / "core.sqlite"
-    make_database(database)
-    store = TicketStore(database)
-    ticket = store.acquire_or_create("external-1", account_id="acct")
-    store.commit_completed(
-        ticket.ticket_id,
-        AIMessage(content="Finished", id="final-1"),
+        message=HumanMessage(content="hello", id="message-1"),
     )
 
-    class NeverInvoked:
-        async def ainvoke(self, initial_state, config):
-            raise AssertionError("terminal ticket reached the workflow")
+    def child_node(_state):
+        return {"messages": [AIMessage(content="reply", id="reply-1")]}
 
-    async def exercise():
-        with pytest.raises(ValueError, match="ticket is terminal: completed"):
-            await aresume_ticket(
-                ticket.ticket_id, workflow=NeverInvoked(), ticket_store=store,
-            )
+    child_builder = StateGraph(WorkflowState)
+    child_builder.add_node("child", child_node)
+    child_builder.add_edge(START, "child")
+    child_builder.add_edge("child", END)
 
-    asyncio.run(exercise())
+    parent_builder = StateGraph(WorkflowState)
+    parent_builder.add_node("child_graph", child_builder.compile())
+    parent_builder.add_edge(START, "child_graph")
+    parent_builder.add_edge("child_graph", END)
 
+    result = parent_builder.compile().invoke(state)
+    assert [(message.id, message.type) for message in result["messages"]] == [
+        ("message-1", "human"), ("reply-1", "ai"),
+    ]

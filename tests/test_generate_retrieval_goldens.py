@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from data.models.udahub import Account, Base, Knowledge
-from evals.generate_retrieval_goldens import (
+from evals.retrieval.generate_retrieval_goldens import (
     CompatibleDeepSeekModel,
     STYLING_CONFIG_VERSION,
     build_synthesizer_configs,

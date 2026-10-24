@@ -1,6 +1,6 @@
 import asyncio
 import json
-from agentic.tools.knowledge_client import aget_kb_tools
+from agentic.capabilities.tools.knowledge_client import aget_kb_tools
 
 async def main():
     tools = await aget_kb_tools()

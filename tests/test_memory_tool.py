@@ -3,7 +3,7 @@ import uuid
 import pytest
 from typing import Any, Dict
 
-from agentic.tools.memory_client import aget_memory_tools
+from agentic.capabilities.tools.memory_client import aget_memory_tools
 
 
 def _get_default_cultpass_user() -> Dict[str, Any]:
