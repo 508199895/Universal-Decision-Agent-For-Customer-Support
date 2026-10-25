@@ -5,7 +5,10 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 import pytest
 
-from agentic.data.tickets.ticket_store import TicketEventStore, TicketPersistenceError
+from agentic.data.tickets.ticket_store import (
+    TicketEventStore,
+    TicketPersistenceError,
+)
 from agentic.orchestration.workflow import aenter_ticket, build_workflow
 from agentic.orchestration.workflow_state import WorkflowState
 
@@ -69,7 +72,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     ]
     assert events[-2]["event_type"] == "run.end"
     assert events[-1]["event_type"] == "ticket.completed"
-    assert events[-1]["content"]["message"] == "已整理好后续处理材料，自动处理已结束；目前尚未确认人工已接手。"
+    assert events[-1]["content"]["message"] == "已转人工，等待人工客服回应"
 
     async def read_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
@@ -289,3 +292,84 @@ def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_p
     ]
     assert len(terminal_events) == 1
     assert terminal_events[0]["content"]["message"] == "已完成。"
+
+
+def test_selected_pending_ticket_is_used_instead_of_completed_checkpoint(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+
+    async def await_reply(state):
+        return {"ticket": {**state["ticket"], "status": "waiting_reply"}}
+
+    builder = StateGraph(WorkflowState)
+    builder.add_node("await_reply", await_reply)
+    builder.add_edge(START, "await_reply")
+    builder.add_edge("await_reply", END)
+
+    async def continue_selected_pending_ticket():
+        async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
+            graph = builder.compile(checkpointer=checkpointer)
+            await aenter_ticket(
+                "external-1", HumanMessage(content="start", id="customer-1"),
+                user_id="user-1", workflow=graph, ticket_event_store=store,
+                ticket_id="checkpoint-ticket", new_ticket=True,
+            )
+            store.commit_completed("checkpoint-ticket", final_message="done")
+            store.create_ticket(
+                ticket_id="pending-ticket", user_id="user-1", status="pending",
+                initial_message=HumanMessage(content="pending start", id="pending-1").model_dump(),
+            )
+            return await aenter_ticket(
+                "external-1", HumanMessage(content="new reply", id="customer-2"),
+                user_id="user-1", workflow=graph, ticket_event_store=store,
+                ticket_id="pending-ticket", new_ticket=False,
+            )
+
+    result = asyncio.run(continue_selected_pending_ticket())
+
+    assert result["ticket"]["ticket_id"] == "pending-ticket"
+    assert [message.id for message in result["messages"]] == ["pending-1", "customer-2"]
+    assert store.status("checkpoint-ticket") == "completed"
+
+
+def test_existing_checkpoint_takes_precedence_over_another_pending_ticket(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+
+    async def await_reply(state):
+        if state["ticket"]["input"] == "done":
+            return {
+                "ticket": {**state["ticket"], "status": "completed"},
+                "query": {**state["query"], "answer": "已完成。", "validated": True},
+            }
+        return {"ticket": {**state["ticket"], "status": "waiting_reply"}}
+
+    builder = StateGraph(WorkflowState)
+    builder.add_node("await_reply", await_reply)
+    builder.add_edge(START, "await_reply")
+    builder.add_edge("await_reply", END)
+
+    async def continue_current_checkpoint():
+        async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
+            graph = builder.compile(checkpointer=checkpointer)
+            await aenter_ticket(
+                "external-1", HumanMessage(content="start", id="customer-1"),
+                user_id="user-1", workflow=graph, ticket_event_store=store,
+                ticket_id="ticket-current", new_ticket=True,
+            )
+            store.create_ticket(
+                ticket_id="ticket-pending", user_id="user-1", status="pending",
+                initial_message=HumanMessage(content="other request", id="other-1").model_dump(),
+            )
+            return await aenter_ticket(
+                "external-1", HumanMessage(content="done", id="customer-2"),
+                user_id="user-1", workflow=graph, ticket_event_store=store,
+                new_ticket=False,
+            )
+
+    result = asyncio.run(continue_current_checkpoint())
+
+    assert result["ticket"]["ticket_id"] == "ticket-current"
+    assert result["ticket"]["status"] == "completed"
+    assert [message.id for message in result["messages"]] == ["customer-1", "customer-2"]
+    assert store.status("ticket-pending") == "pending"

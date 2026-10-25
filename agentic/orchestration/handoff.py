@@ -8,7 +8,7 @@ from langchain_core.messages import SystemMessage
 from agentic.orchestration.workflow_state import validate_state
 
 
-HANDOFF_NOTICE = "已整理好后续处理材料，自动处理已结束；目前尚未确认人工已接手。"
+HANDOFF_NOTICE = "已转人工，等待人工客服回应"
 
 
 def build_handoff_messages(

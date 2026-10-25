@@ -76,19 +76,6 @@ async def _handle_ticket(ticket: Dict[str, Any], workflow, event_store):
     )
 
 
-def _parse_chat_input(value: str) -> tuple[str, bool]:
-    """Return customer text and whether this input starts a new ticket."""
-    value = value.strip()
-    if value.startswith(":"):
-        command, separator, content = value.partition(" ")
-        if command not in {":new", ":continue"} or not separator or not content.strip():
-            raise ValueError("Use ':new <request>' or ':continue <reply>'.")
-        return content.strip(), command == ":new"
-    if not value:
-        raise ValueError("Customer message must not be empty.")
-    return value, True
-
-
 async def run_single_ticket_demo(workflow, event_store) -> None:
     """
     Run the current handoff-only workflow for a sample ticket.
@@ -121,8 +108,7 @@ async def interactive_chat_loop(workflow, event_store) -> None:
     """
     Very simple interactive CLI loop.
 
-    Plain input starts a new ticket; ':continue <reply>' resumes the latest
-    unfinished ticket. The loop prints each result until the user exits.
+    Existing unfinished tickets trigger a fixed continue-or-new prompt.
 
     This is not a streaming chat; each run exercises one ticket lifecycle.
     """
@@ -132,8 +118,6 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             UDA-Hub Interactive CLI
             -----------------------
             Type a new CultPass support issue and press Enter.
-            Use ':continue <reply>' to continue the latest unfinished ticket.
-            Use ':new <request>' to explicitly start another ticket.
             Type 'exit' or 'quit' to stop.
 
             Example:
@@ -155,17 +139,14 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             print("Exiting UDA-Hub CLI. Goodbye!")
             break
 
-        try:
-            content, new_ticket = _parse_chat_input(user_text)
-        except ValueError as error:
-            print(error)
-            continue
+        content = user_text
+        new_ticket, continuation_ticket_id = await _should_start_new_ticket(
+            event_store, default_user_id, workflow=workflow,
+        )
 
-        if not new_ticket and not _has_unfinished_ticket(event_store, default_user_id):
-            print("No unfinished ticket is available. Submit a request or use ':new <request>'.")
-            continue
-
-        ticket_id = f"CLI-{uuid.uuid4().hex[:8]}" if new_ticket else None
+        ticket_id = (
+            f"CLI-{uuid.uuid4().hex[:8]}" if new_ticket else continuation_ticket_id
+        )
         ticket: Dict[str, Any] = {
             "content": content,
             "user_id": default_user_id,
@@ -176,7 +157,7 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             "new_ticket": new_ticket,
         }
 
-        print(f"\n[Processing {'new ticket ' + ticket_id if ticket_id else 'ticket request'}...]")
+        print("\n[Processing ticket...]")
         final_state = await _handle_ticket(ticket, workflow, event_store)
 
         escalation = final_state.get("escalation") or {}
@@ -188,12 +169,47 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             print(customer_message)
 
 
-def _has_unfinished_ticket(event_store, user_id: str) -> bool:
-    pending = event_store.latest_uninitialized_ticket(user_id)
-    if pending is not None:
-        return True
+def _continuation_ticket_id(event_store, user_id: str) -> str | None:
+    """Select a continuation candidate, preferring the latest checkpoint ticket."""
     latest = event_store.latest_checkpoint_ticket(user_id)
-    return latest is not None and latest.status != "completed"
+    if latest is not None and latest.status != "completed":
+        return latest.ticket_id
+
+    pending = event_store.latest_uninitialized_ticket(user_id)
+    if pending is not None and pending.status != "completed":
+        return pending.ticket_id
+    return None
+
+
+async def _should_start_new_ticket(
+    event_store, user_id: str, *, workflow=None,
+) -> tuple[bool, str | None]:
+    continuation_ticket_id = _continuation_ticket_id(event_store, user_id)
+    if continuation_ticket_id is not None and workflow is not None:
+        thread_id = event_store.thread_id(user_id)
+        snapshot = await workflow.aget_state({"configurable": {"thread_id": thread_id}})
+        checkpoint_ticket = (snapshot.values or {}).get("ticket", {})
+        if (
+            checkpoint_ticket.get("ticket_id") == continuation_ticket_id
+            and checkpoint_ticket.get("status") in {"completed", "handed_off"}
+        ):
+            pending = event_store.latest_uninitialized_ticket(user_id)
+            continuation_ticket_id = (
+                pending.ticket_id
+                if pending is not None and pending.status != "completed"
+                else None
+            )
+    if continuation_ticket_id is None:
+        return True, None
+
+    while True:
+        answer = (await asyncio.to_thread(
+            input, "检测到有未完成工单，是否继续？",
+        )).strip().lower()
+        if answer in {"是", "y", "yes"}:
+            return False, continuation_ticket_id
+        if answer in {"否", "n", "no"}:
+            return True, None
 
 
 # CLI

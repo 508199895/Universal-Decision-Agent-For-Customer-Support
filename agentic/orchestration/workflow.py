@@ -29,7 +29,11 @@ from agentic.agents.customer_support_agent import build_customer_support_agent
 from agentic.capabilities.support_toolset import acollect_support_tools
 from agentic.orchestration.handoff import HANDOFF_NOTICE, build_handoff_messages
 from agentic.data.tickets.message_journal import TicketJournal
-from agentic.data.tickets.ticket_store import TicketEventStore, TicketPersistenceError
+from agentic.data.tickets.ticket_store import (
+    TicketAlreadyTerminal,
+    TicketEventStore,
+    TicketPersistenceError,
+)
 from agentic.orchestration.workflow_state import (
     StateContractError, WorkflowState, initial_state, merge_patch, validate_state,
 )
@@ -240,13 +244,11 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
     config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
     snapshot = await workflow.aget_state(config)
     latest_state = dict(snapshot.values or {})
+    needs_upgrade = False
     if latest_state:
         latest_state, needs_upgrade = _normalize_checkpoint_state(latest_state)
         if needs_upgrade:
             validate_state(latest_state)
-            await _replace_workflow_state(workflow, config, latest_state)
-            snapshot = await workflow.aget_state(config)
-            latest_state = dict(snapshot.values or {})
     latest_ticket = (latest_state.get("ticket", {}) or {}) if latest_state else {}
     latest_ticket_id = latest_ticket.get("ticket_id")
     continue_latest = bool(
@@ -255,9 +257,30 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
         and latest_ticket.get("status") not in TERMINAL_TICKET_STATUSES
     )
     record = None
-    pending_record = await asyncio.to_thread(
-        ticket_event_store.latest_uninitialized_ticket, user_id,
-    )
+    if continue_latest:
+        try:
+            record = await asyncio.to_thread(ticket_event_store.get_ticket, latest_ticket_id)
+        except Exception as error:
+            from agentic.data.tickets.ticket_store import TicketHistoryConflict
+            if not isinstance(error, TicketHistoryConflict):
+                raise
+            record = await asyncio.to_thread(
+                ticket_event_store.create_ticket,
+                ticket_id=latest_ticket_id, user_id=user_id,
+                # State.ticket.status is workflow state, not the overall ticket status.
+                status="running",
+            )
+        if record.user_id != user_id:
+            from agentic.data.tickets.ticket_store import TicketHistoryConflict
+            raise TicketHistoryConflict("latest checkpoint ticket does not belong to the authenticated user")
+        if record.status == "completed":
+            raise TicketAlreadyTerminal(f"ticket {record.ticket_id} is completed")
+    pending_record = None
+    # The CLI's selected ticket ID distinguishes checkpoint continuation from pending recovery.
+    if not new_ticket and not continue_latest:
+        pending_record = await asyncio.to_thread(
+            ticket_event_store.latest_uninitialized_ticket, user_id,
+        )
     if not latest_state and pending_record is None:
         checkpoint_record = await asyncio.to_thread(
             ticket_event_store.latest_checkpoint_ticket, user_id,
@@ -267,6 +290,11 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
                 f"checkpoint marked initialized but missing for ticket {checkpoint_record.ticket_id}"
             )
     if pending_record is not None:
+        pending_record = await asyncio.to_thread(
+            ticket_event_store.get_ticket, pending_record.ticket_id,
+        )
+        if pending_record.status == "completed":
+            raise TicketAlreadyTerminal(f"ticket {pending_record.ticket_id} is completed")
         message_events = [
             event for event in await asyncio.to_thread(
                 ticket_event_store.events, user_id=user_id, ticket_id=pending_record.ticket_id,
@@ -311,23 +339,10 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
         continue_latest = True
 
     if continue_latest:
-        if record is None:
-            try:
-                record = await asyncio.to_thread(ticket_event_store.get_ticket, latest_ticket_id)
-            except Exception as error:
-                from agentic.data.tickets.ticket_store import TicketHistoryConflict
-                if not isinstance(error, TicketHistoryConflict):
-                    raise
-                record = await asyncio.to_thread(
-                    ticket_event_store.create_ticket,
-                    ticket_id=latest_ticket_id, user_id=user_id,
-                    # Checkpoint State.ticket.status is workflow state, not the
-                    # overall processing status stored on the ticket row.
-                    status="running",
-                )
-        if record.user_id != user_id:
-            from agentic.data.tickets.ticket_store import TicketHistoryConflict
-            raise TicketHistoryConflict("latest checkpoint ticket does not belong to the authenticated user")
+        if needs_upgrade:
+            validate_state(latest_state)
+            await _replace_workflow_state(workflow, config, latest_state)
+            needs_upgrade = False
         if not await asyncio.to_thread(ticket_event_store.checkpoint_initialized, record.ticket_id):
             await asyncio.to_thread(ticket_event_store.mark_checkpoint_initialized, record.ticket_id)
     else:
