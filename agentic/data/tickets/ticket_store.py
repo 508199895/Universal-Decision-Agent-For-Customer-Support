@@ -297,17 +297,26 @@ class TicketEventStore:
         finally:
             connection.close()
 
-    def commit_handoff(self, ticket_id: str, *, state: dict[str, Any]) -> bool:
+    def commit_handoff(self, ticket_id: str, *, state: dict[str, Any], final_message: str) -> bool:
         if state.get("ticket", {}).get("ticket_id") != ticket_id:
             raise TicketHistoryConflict("handoff state ticket_id does not match the target ticket")
+        notice_id = f"handoff:{ticket_id}:notice"
+        state_notice = next((
+            message.get("content") if isinstance(message, dict) else getattr(message, "content", None)
+            for message in state.get("messages", [])
+            if (message.get("id") if isinstance(message, dict) else getattr(message, "id", None)) == notice_id
+        ), None)
+        if not isinstance(final_message, str) or not final_message.strip() or state_notice != final_message:
+            raise TicketHistoryConflict("handoff state does not match its customer notice")
         # Handoff is a WorkflowState.ticket.status; the ticket processing itself is complete.
-        return self._commit_terminal(ticket_id, "completed")
+        return self._commit_terminal(ticket_id, "completed", final_message=final_message)
 
     def commit_completed(self, ticket_id: str, final_message: Any = None) -> bool:
-        del final_message  # Conversation messages live in the LangGraph checkpoint.
-        return self._commit_terminal(ticket_id, "completed")
+        if not isinstance(final_message, str) or not final_message.strip():
+            raise TicketHistoryConflict("completed ticket is missing its customer-facing final message")
+        return self._commit_terminal(ticket_id, "completed", final_message=final_message)
 
-    def _commit_terminal(self, ticket_id: str, status: str) -> bool:
+    def _commit_terminal(self, ticket_id: str, status: str, *, final_message: Any = None) -> bool:
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
@@ -322,6 +331,12 @@ class TicketEventStore:
             connection.execute(
                 "UPDATE tickets SET status = ?, updated_at = ? WHERE ticket_id = ?",
                 (status, _utc_now(), ticket_id),
+            )
+            self._append_event_in_transaction(
+                connection, user_id=self._ticket_user_in_transaction(connection, ticket_id),
+                ticket_id=ticket_id, event_type="ticket.completed", category="outputs",
+                content={"message": final_message} if final_message is not None else {},
+                metadata={}, created_at=_utc_now(),
             )
             connection.commit()
             return True

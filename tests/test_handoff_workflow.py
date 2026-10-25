@@ -67,7 +67,9 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     assert [event["event_type"] for event in events][:3] == [
         "ticket.created", "ticket.message.received", "checkpoint.initialized",
     ]
-    assert events[-1]["event_type"] == "run.end"
+    assert events[-2]["event_type"] == "run.end"
+    assert events[-1]["event_type"] == "ticket.completed"
+    assert events[-1]["content"]["message"] == "已整理好后续处理材料，自动处理已结束；目前尚未确认人工已接手。"
 
     async def read_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
@@ -238,3 +240,52 @@ def test_new_ticket_replaces_previous_users_messages_in_checkpoint(tmp_path):
     ]
     assert store.get_ticket("ticket-1").status == "completed"
     assert store.get_ticket("ticket-2").status == "completed"
+
+
+def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+
+    async def await_reply(state):
+        status = "completed" if state["ticket"]["input"] == "done" else "waiting_reply"
+        if status == "completed":
+            return {
+                "ticket": {**state["ticket"], "status": status},
+                "query": {**state["query"], "answer": "已完成。", "validated": True},
+            }
+        return {"ticket": {**state["ticket"], "status": status}}
+
+    builder = StateGraph(WorkflowState)
+    builder.add_node("await_reply", await_reply)
+    builder.add_edge(START, "await_reply")
+    builder.add_edge("await_reply", END)
+
+    async def converse():
+        async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
+            from agentic.orchestration.workflow import aenter_ticket
+
+            graph = builder.compile(checkpointer=checkpointer)
+            first = await aenter_ticket(
+                "external-1", HumanMessage(content="start", id="customer-1"),
+                user_id="user-1", workflow=graph, ticket_event_store=store,
+                new_ticket=True,
+            )
+            continued = await aenter_ticket(
+                "external-1", HumanMessage(content="done", id="customer-2"),
+                user_id="user-1", workflow=graph, ticket_event_store=store,
+            )
+            return first, continued
+
+    first, continued = asyncio.run(converse())
+
+    assert first["ticket"]["status"] == "waiting_reply"
+    assert continued["ticket"]["ticket_id"] == first["ticket"]["ticket_id"]
+    assert continued["ticket"]["status"] == "completed"
+    assert [message.id for message in continued["messages"]] == ["customer-1", "customer-2"]
+    assert store.status(first["ticket"]["ticket_id"]) == "completed"
+    terminal_events = [
+        event for event in store.events(user_id="user-1", ticket_id=first["ticket"]["ticket_id"])
+        if event["event_type"] == "ticket.completed"
+    ]
+    assert len(terminal_events) == 1
+    assert terminal_events[0]["content"]["message"] == "已完成。"

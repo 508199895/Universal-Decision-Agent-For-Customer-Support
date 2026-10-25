@@ -37,9 +37,9 @@ from langchain_core.messages import HumanMessage
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / ".env")
 
-from agentic.orchestration.handoff import HANDOFF_NOTICE
 from agentic.orchestration.workflow import (
     aenter_ticket,
+    customer_message_for_state,
     default_workflow_runtime,
 )
 
@@ -76,6 +76,19 @@ async def _handle_ticket(ticket: Dict[str, Any], workflow, event_store):
     )
 
 
+def _parse_chat_input(value: str) -> tuple[str, bool]:
+    """Return customer text and whether this input starts a new ticket."""
+    value = value.strip()
+    if value.startswith(":"):
+        command, separator, content = value.partition(" ")
+        if command not in {":new", ":continue"} or not separator or not content.strip():
+            raise ValueError("Use ':new <request>' or ':continue <reply>'.")
+        return content.strip(), command == ":new"
+    if not value:
+        raise ValueError("Customer message must not be empty.")
+    return value, True
+
+
 async def run_single_ticket_demo(workflow, event_store) -> None:
     """
     Run the current handoff-only workflow for a sample ticket.
@@ -108,9 +121,8 @@ async def interactive_chat_loop(workflow, event_store) -> None:
     """
     Very simple interactive CLI loop.
 
-    Each user input is treated as a new ticket content.
-    We call the workflow once per ticket, print the final resolution, and then
-    prompt again until the user types 'exit' or 'quit'.
+    Plain input starts a new ticket; ':continue <reply>' resumes the latest
+    unfinished ticket. The loop prints each result until the user exits.
 
     This is not a streaming chat; each run exercises one ticket lifecycle.
     """
@@ -120,6 +132,8 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             UDA-Hub Interactive CLI
             -----------------------
             Type a new CultPass support issue and press Enter.
+            Use ':continue <reply>' to continue the latest unfinished ticket.
+            Use ':new <request>' to explicitly start another ticket.
             Type 'exit' or 'quit' to stop.
 
             Example:
@@ -141,25 +155,45 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             print("Exiting UDA-Hub CLI. Goodbye!")
             break
 
-        ticket_id = f"CLI-{uuid.uuid4().hex[:8]}"
+        try:
+            content, new_ticket = _parse_chat_input(user_text)
+        except ValueError as error:
+            print(error)
+            continue
+
+        if not new_ticket and not _has_unfinished_ticket(event_store, default_user_id):
+            print("No unfinished ticket is available. Submit a request or use ':new <request>'.")
+            continue
+
+        ticket_id = f"CLI-{uuid.uuid4().hex[:8]}" if new_ticket else None
         ticket: Dict[str, Any] = {
-            "content": user_text,
+            "content": content,
             "user_id": default_user_id,
             "account_id": default_account_id,
             "external_user_id": default_external_user_id,
             "user_name": "CLI User",
             "ticket_id": ticket_id,
-            "new_ticket": True,
+            "new_ticket": new_ticket,
         }
 
-        print(f"\n[Processing ticket {ticket_id}...]")
+        print(f"\n[Processing {'new ticket ' + ticket_id if ticket_id else 'ticket request'}...]")
         final_state = await _handle_ticket(ticket, workflow, event_store)
 
         escalation = final_state.get("escalation") or {}
 
         print("\n--- Result ---")
         print(f"Ticket status: {final_state.get('ticket', {}).get('status')}")
-        print(HANDOFF_NOTICE)
+        customer_message = customer_message_for_state(final_state)
+        if customer_message:
+            print(customer_message)
+
+
+def _has_unfinished_ticket(event_store, user_id: str) -> bool:
+    pending = event_store.latest_uninitialized_ticket(user_id)
+    if pending is not None:
+        return True
+    latest = event_store.latest_checkpoint_ticket(user_id)
+    return latest is not None and latest.status != "completed"
 
 
 # CLI

@@ -10,6 +10,7 @@ from agentic.data.tickets.ticket_store import (
     TicketAlreadyTerminal,
     TicketEventStore,
     TicketHistoryConflict,
+    TicketPersistenceError,
 )
 from agentic.orchestration.workflow_state import (
     StateContractError,
@@ -102,11 +103,64 @@ def test_ticket_status_and_token_updates_follow_the_new_contract(tmp_path):
     store.add_tokens("ticket-1", 8)
     assert store.get_ticket("ticket-1").tokens == 20
 
-    assert store.commit_completed("ticket-1")
-    assert not store.commit_completed("ticket-1")
+    assert store.commit_completed("ticket-1", final_message="处理完成。")
+    assert not store.commit_completed("ticket-1", final_message="处理完成。")
     assert store.status("ticket-1") == "completed"
     with pytest.raises(TicketAlreadyTerminal):
         store.set_status("ticket-1", "running")
+
+
+def test_terminal_status_and_customer_notice_commit_in_one_transaction(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+    store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
+
+    assert store.commit_completed("ticket-1", final_message="处理已完成。")
+    assert store.status("ticket-1") == "completed"
+    terminal_events = [
+        event for event in store.events(user_id="user-1", ticket_id="ticket-1")
+        if event["event_type"] == "ticket.completed"
+    ]
+    assert len(terminal_events) == 1
+    assert terminal_events[0]["content"] == {"message": "处理已完成。"}
+    assert not store.commit_completed("ticket-1", final_message="处理已完成。")
+    assert len([
+        event for event in store.events(user_id="user-1", ticket_id="ticket-1")
+        if event["event_type"] == "ticket.completed"
+    ]) == 1
+
+
+def test_terminal_event_failure_rolls_back_completed_status(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+    store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
+    connection = sqlite3.connect(database)
+    connection.execute(
+        """CREATE TRIGGER reject_terminal_event BEFORE INSERT ON ticket_events
+           WHEN NEW.event_type = 'ticket.completed'
+           BEGIN SELECT RAISE(ABORT, 'terminal event rejected'); END"""
+    )
+    connection.commit()
+    connection.close()
+
+    with pytest.raises(TicketPersistenceError, match="terminal status persistence failed"):
+        store.commit_completed("ticket-1", final_message="处理已完成。")
+
+    assert store.status("ticket-1") == "running"
+    assert not [
+        event for event in store.events(user_id="user-1", ticket_id="ticket-1")
+        if event["event_type"] == "ticket.completed"
+    ]
+
+
+def test_completed_ticket_requires_customer_facing_message(tmp_path):
+    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
+
+    with pytest.raises(TicketHistoryConflict, match="missing its customer-facing"):
+        store.commit_completed("ticket-1")
+
+    assert store.status("ticket-1") == "running"
 
 
 def test_workflow_state_inherits_agent_state_and_keeps_messages_at_the_top_level():

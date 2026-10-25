@@ -27,7 +27,7 @@ from langgraph.types import RunnableConfig
 from agentic.agents.escalation_agent import build_escalation_agent
 from agentic.agents.customer_support_agent import build_customer_support_agent
 from agentic.capabilities.support_toolset import acollect_support_tools
-from agentic.orchestration.handoff import build_handoff_messages
+from agentic.orchestration.handoff import HANDOFF_NOTICE, build_handoff_messages
 from agentic.data.tickets.message_journal import TicketJournal
 from agentic.data.tickets.ticket_store import TicketEventStore, TicketPersistenceError
 from agentic.orchestration.workflow_state import (
@@ -377,11 +377,7 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
                 except Exception:
                     pass
             raise
-        workflow_status = result.get("ticket", {}).get("status")
-        if workflow_status == "handed_off":
-            await asyncio.to_thread(ticket_event_store.commit_handoff, actual_ticket_id, state=result)
-        elif workflow_status == "completed":
-            await asyncio.to_thread(ticket_event_store.commit_completed, actual_ticket_id)
+        await _commit_ticket_terminal(ticket_event_store, actual_ticket_id, result)
         return result
 
     journal = TicketJournal(ticket_event_store, user_id=user_id, ticket_id=record.ticket_id)
@@ -404,10 +400,7 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
         # LangGraph returns only after persisting the node output checkpoint. Commit the
         # core terminal state afterward; retries can repair a failed core transaction above.
         workflow_status = result.get("ticket", {}).get("status")
-        if workflow_status == "handed_off":
-            await asyncio.to_thread(ticket_event_store.commit_handoff, record.ticket_id, state=result)
-        elif workflow_status == "completed":
-            await asyncio.to_thread(ticket_event_store.commit_completed, record.ticket_id)
+        await _commit_ticket_terminal(ticket_event_store, record.ticket_id, result)
 
         current = await asyncio.to_thread(ticket_event_store.status, record.ticket_id)
         if current != "completed" or workflow_status not in {"completed", "handed_off"}:
@@ -432,6 +425,35 @@ async def aenter_ticket(external_user_id: str, message: HumanMessage, *, user_id
 
 def _message_id(message: Any) -> str | None:
     return message.get("id") if isinstance(message, dict) else getattr(message, "id", None)
+
+
+async def _commit_ticket_terminal(event_store: TicketEventStore, ticket_id: str,
+                                  state: dict[str, Any]) -> None:
+    status = state.get("ticket", {}).get("status")
+    if status == "handed_off":
+        await asyncio.to_thread(
+            event_store.commit_handoff, ticket_id,
+            state=state, final_message=HANDOFF_NOTICE,
+        )
+    elif status == "completed":
+        await asyncio.to_thread(
+            event_store.commit_completed, ticket_id,
+            customer_message_for_state(state),
+        )
+
+
+def customer_message_for_state(state: dict[str, Any]) -> str | None:
+    """Project only a validated answer or the fixed handoff notice to the customer."""
+    ticket = state.get("ticket", {})
+    if ticket.get("status") == "handed_off":
+        return HANDOFF_NOTICE
+    if ticket.get("status") == "waiting_reply":
+        return state.get("confirm", {}).get("prompt") or state.get("clarify", {}).get("prompt")
+    query = state.get("query", {})
+    answer = query.get("answer")
+    if ticket.get("status") == "completed" and query.get("validated") is True:
+        return answer if isinstance(answer, str) and answer.strip() else None
+    return None
 
 
 def _normalize_checkpoint_state(state: dict[str, Any]) -> tuple[dict[str, Any], bool]:
@@ -516,10 +538,7 @@ async def aresume_ticket(user_id: str, *, workflow, reply=None,
     try:
         result = await _invoke_with_journal(workflow, thread_id, journal, payload=payload)
         workflow_status = result.get("ticket", {}).get("status")
-        if workflow_status == "handed_off":
-            await asyncio.to_thread(event_store.commit_handoff, ticket_id, state=result)
-        elif workflow_status == "completed":
-            await asyncio.to_thread(event_store.commit_completed, ticket_id)
+        await _commit_ticket_terminal(event_store, ticket_id, result)
         return result
     except asyncio.CancelledError:
         await asyncio.to_thread(event_store.set_status, ticket_id, "failed")
