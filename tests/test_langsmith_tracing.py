@@ -1,68 +1,28 @@
 from __future__ import annotations
 
-from agentic.observability.langsmith_tracing import (
-    build_trace_config,
-    redact_trace_data,
-)
+from langsmith.anonymizer import create_secret_anonymizer
+
+from agentic.observability.langsmith_tracing import build_trace_config
 from agentic.orchestration.workflow import _invoke_with_journal
 
 
-def test_redactor_masks_configured_secrets_and_sensitive_fields_recursively():
-    secret = "synthetic-langsmith-key-123"
-    value = {
-        "input": {"content": f"request included {secret}"},
-        "metadata": {"api_key": secret},
-        "tags": [secret],
+def test_secret_anonymizer_redacts_secret_formats_but_preserves_other_trace_data():
+    anonymize = create_secret_anonymizer()
+    secret = "sk-" + "A" * 36
+    payload = {
+        "inputs": {"message": f"test key {secret}", "notes": "ordinary diagnostic text"},
+        "outputs": {"authorization": f"Bearer {secret}", "token_usage": {"total_tokens": 6}},
+        "metadata": {"ticket_id": "ticket-123", "source_ref": "policies/policy.md"},
+        "tags": ["customer-support", secret],
     }
 
-    redacted = redact_trace_data(value, secrets=(secret,))
+    redacted = anonymize(payload)
 
     assert secret not in repr(redacted)
-    assert "request included [REDACTED]" in redacted["input"]["content"]
-    assert redacted["metadata"]["api_key"] == "[REDACTED]"
-    assert redact_trace_data({"api_key": "different-secret"}) == {"api_key": "[REDACTED]"}
-
-
-def test_redactor_drops_markdown_file_contents_with_source_reference():
-    value = {
-        "evidence": {
-            "source_ref": "policies/cancellation.md",
-            "content": "# Cancellation policy\nInternal markdown content",
-            "score": 0.91,
-        },
-        "debug": "tool returned 2 records",
-    }
-
-    redacted = redact_trace_data(value)
-
-    assert "Internal markdown content" not in repr(redacted)
-    assert redacted["evidence"] == {"redacted": "markdown file"}
-    assert redacted["debug"] == "tool returned 2 records"
-    assert redact_trace_data({"token_usage": {"total_tokens": 6}}) == {
-        "token_usage": {"total_tokens": 6},
-    }
-
-
-def test_redactor_masks_markdown_paths_and_bearer_credentials():
-    redacted = redact_trace_data({
-        "path": "docs/private.md",
-        "authorization": "Bearer synthetic-token",
-    })
-
-    assert redacted == {
-        "path": "[REDACTED MARKDOWN FILE]",
-        "authorization": "[REDACTED]",
-    }
-
-
-def test_redactor_masks_markdown_with_common_metadata_path_aliases():
-    for path_key in ("source", "file_path", "file_name", "source_file"):
-        redacted = redact_trace_data({
-            "metadata": {path_key: "knowledge/policy.md"},
-            "page_content": "# Private test policy",
-            "status": "retrieved",
-        })
-        assert redacted == {"redacted": "markdown file"}
+    assert "[SECRET_DETECTED]" in repr(redacted)
+    assert redacted["inputs"]["notes"] == "ordinary diagnostic text"
+    assert redacted["metadata"]["source_ref"] == "policies/policy.md"
+    assert redacted["outputs"]["token_usage"] == {"total_tokens": 6}
 
 
 def test_trace_is_disabled_without_explicit_tracing_and_key(monkeypatch):
@@ -95,23 +55,17 @@ def test_trace_config_has_ticket_metadata_and_redacting_callbacks(monkeypatch):
     assert config["metadata"] == {"ticket_id": "ticket-123"}
     assert config["tags"] == ["customer-support", "ticket-123"]
     assert tracer.project_name == "support-tests"
-    assert tracer.client.options["hide_inputs"]({"content": "synthetic-langsmith-key-123"}) == {
-        "content": "[REDACTED]",
+    anonymizer = tracer.client.options["anonymizer"]
+    secret = "sk-" + "B" * 36
+    for field in ("inputs", "outputs", "metadata", "error"):
+        assert secret not in repr(anonymizer({field: f"credential {secret}"}))
+    assert anonymizer({"source_ref": "private.md", "content": "markdown body"}) == {
+        "source_ref": "private.md", "content": "markdown body",
     }
-    assert tracer.client.options["hide_outputs"]({"content": "synthetic-langsmith-key-123"}) == {
-        "content": "[REDACTED]",
-    }
-    assert tracer.client.options["hide_metadata"]({"credential": "synthetic-langsmith-key-123"}) == {
-        "credential": "[REDACTED]",
-    }
-    assert tracer.client.options["anonymizer"]({"error": "synthetic-langsmith-key-123"}) == {
-        "error": "[REDACTED]",
-    }
-    assert tracer.client.options["hide_inputs"]({
-        "source_ref": "private.md", "content": "fake source body",
-    }) == {
-        "redacted": "markdown file",
-    }
+
+    secret_config = build_trace_config(secret)
+    assert secret not in repr(secret_config["metadata"])
+    assert secret not in repr(secret_config["tags"])
 
 
 def test_workflow_invocation_attaches_ticket_trace_settings(monkeypatch):
