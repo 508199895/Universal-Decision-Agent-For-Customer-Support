@@ -37,6 +37,7 @@ from agentic.data.tickets.ticket_store import (
 from agentic.orchestration.workflow_state import (
     StateContractError, WorkflowState, initial_state, merge_patch, validate_state,
 )
+from agentic.observability.langsmith_tracing import build_trace_config
 
 
 @dataclass(frozen=True)
@@ -505,6 +506,12 @@ async def _invoke_with_journal(workflow, thread_id: str, journal: TicketJournal,
         "configurable": {"thread_id": thread_id},
         "callbacks": [journal],
     }
+    trace_config = build_trace_config(journal.ticket_id)
+    if trace_config:
+        config["run_name"] = trace_config["run_name"]
+        config["metadata"] = trace_config["metadata"]
+        config["tags"] = trace_config["tags"]
+        config["callbacks"].extend(trace_config["callbacks"])
     try:
         result = await workflow.ainvoke(payload, config=config, durability="async")
         await journal.record_lifecycle("run.end", "outputs", {"ticket_id": journal.ticket_id})
