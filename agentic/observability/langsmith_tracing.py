@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 
@@ -29,7 +30,7 @@ def build_trace_config(ticket_id: str) -> dict[str, Any]:
     if endpoint:
         client_options["api_url"] = endpoint
     client = Client(**client_options)
-    project_name = os.getenv("LANGSMITH_PROJECT") or os.getenv("LANGCHAIN_PROJECT")
+    project_name = Path(__file__).resolve().parents[2].name
     tracer = LangChainTracer(client=client, project_name=project_name)
     metadata = secret_anonymizer({"ticket_id": ticket_id})
     tags = secret_anonymizer({"tags": ["customer-support", ticket_id]})["tags"]

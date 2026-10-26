@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from langsmith.anonymizer import create_secret_anonymizer
 
+from agentic.observability import langsmith_tracing
 from agentic.observability.langsmith_tracing import build_trace_config
 from agentic.orchestration.workflow import _invoke_with_journal
 
@@ -41,6 +44,7 @@ def test_trace_config_has_ticket_metadata_and_redacting_callbacks(monkeypatch):
     monkeypatch.setenv("LANGSMITH_TRACING", "true")
     monkeypatch.setenv("LANGSMITH_API_KEY", "synthetic-langsmith-key-123")
     monkeypatch.setenv("LANGSMITH_PROJECT", "support-tests")
+    monkeypatch.setenv("LANGCHAIN_PROJECT", "another-project")
 
     class ClientStub:
         def __init__(self, **options):
@@ -54,7 +58,8 @@ def test_trace_config_has_ticket_metadata_and_redacting_callbacks(monkeypatch):
     assert config["run_name"] == "customer_support_ticket"
     assert config["metadata"] == {"ticket_id": "ticket-123"}
     assert config["tags"] == ["customer-support", "ticket-123"]
-    assert tracer.project_name == "support-tests"
+    expected_project = Path(langsmith_tracing.__file__).resolve().parents[2].name
+    assert tracer.project_name == expected_project
     anonymizer = tracer.client.options["anonymizer"]
     secret = "sk-" + "B" * 36
     for field in ("inputs", "outputs", "metadata", "error"):
