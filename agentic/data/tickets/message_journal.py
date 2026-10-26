@@ -16,13 +16,22 @@ class TicketJournal(AsyncCallbackHandler):
     """Capture message and workflow events, then append them in batches."""
 
     def __init__(self, event_store: TicketEventStore, *, user_id: str, ticket_id: str,
-                 flush_size: int = 20) -> None:
+                 flush_size: int = 20, token_limit: int = 20_000_000) -> None:
         if flush_size < 1:
             raise ValueError("flush_size must be positive")
         self.event_store = event_store
         self.user_id = user_id
         self.ticket_id = ticket_id
         self.flush_size = flush_size
+        if type(token_limit) is not int or token_limit < 1:
+            raise ValueError("token_limit must be a positive integer")
+        self.token_limit = token_limit
+        record = event_store.get_ticket(ticket_id)
+        self.input_tokens = record.input_tokens
+        self.output_tokens = record.output_tokens
+        self.total_tokens = record.tokens
+        self.llm_call_count = record.llm_call_count
+        self._counted_llm_run_ids: set[str] = set()
         self._buffer: list[dict[str, Any]] = []
         self._lock = asyncio.Lock()
         self._input_recorded = False
@@ -46,7 +55,7 @@ class TicketJournal(AsyncCallbackHandler):
         await self._flush_if_full()
 
     async def on_llm_end(self, response, **kwargs) -> None:
-        token_count = 0
+        usage_for_run = None
         async with self._lock:
             for batch in response.generations:
                 for generation in batch:
@@ -58,17 +67,33 @@ class TicketJournal(AsyncCallbackHandler):
                         usage = getattr(message, "usage_metadata", None)
                         if usage:
                             metadata["usage"] = usage
-                            token_count += _reported_tokens(usage)
+                            if usage_for_run is None and _usage_values(usage)[2] > 0:
+                                usage_for_run = usage
                         self._append_locked(
                             event_type="llm.ai.response", category="message",
                             content=message.model_dump(), metadata=metadata,
                         )
-        if token_count:
-            try:
-                await asyncio.to_thread(self.event_store.add_tokens, self.ticket_id, token_count)
-            except Exception:
-                pass
+        if usage_for_run is not None:
+            run_id = str(kwargs.get("run_id"))
+            if run_id not in self._counted_llm_run_ids:
+                self._counted_llm_run_ids.add(run_id)
+                input_tokens, output_tokens, total_tokens = _usage_values(usage_for_run)
+                self.input_tokens += input_tokens
+                self.output_tokens += output_tokens
+                self.total_tokens += total_tokens
+                self.llm_call_count += 1
         await self._flush_if_full()
+
+    async def persist_usage_snapshot(self) -> None:
+        """Persist the accumulated counters once after the graph run finishes."""
+        await asyncio.to_thread(
+            self.event_store.save_token_usage,
+            self.ticket_id,
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
+            total_tokens=self.total_tokens,
+            llm_call_count=self.llm_call_count,
+        )
 
     async def on_tool_end(self, output, **kwargs) -> None:
         messages = _tool_messages(output)
@@ -144,11 +169,19 @@ def _tool_messages(output: Any) -> list[BaseMessage]:
 
 
 def _reported_tokens(usage: Any) -> int:
+    return _usage_values(usage)[2]
+
+
+def _usage_values(usage: Any) -> tuple[int, int, int]:
     if not isinstance(usage, dict):
-        return 0
-    total = usage.get("total_tokens")
-    if type(total) is int and total > 0:
-        return total
-    prompt = usage.get("input_tokens", 0)
-    completion = usage.get("output_tokens", 0)
-    return sum(value for value in (prompt, completion) if type(value) is int and value > 0)
+        return 0, 0, 0
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    input_tokens = input_tokens if type(input_tokens) is int and input_tokens > 0 else 0
+    output_tokens = output_tokens if type(output_tokens) is int and output_tokens > 0 else 0
+    total_tokens = usage.get("total_tokens", 0)
+    if type(total_tokens) is not int or total_tokens < 0:
+        total_tokens = 0
+    if total_tokens == 0:
+        total_tokens = input_tokens + output_tokens
+    return input_tokens, output_tokens, total_tokens

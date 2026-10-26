@@ -82,7 +82,8 @@ def test_migration_preserves_history_and_seeds_latest_active_user_checkpoints(tm
     connection = sqlite3.connect(target)
     ticket_columns = [row[1] for row in connection.execute("PRAGMA table_info(tickets)")]
     assert ticket_columns == [
-        "ticket_id", "user_id", "status", "tokens", "created_at", "updated_at",
+        "ticket_id", "user_id", "status", "tokens", "input_tokens", "output_tokens",
+        "llm_call_count", "created_at", "updated_at",
     ]
     assert connection.execute("SELECT COUNT(*) FROM ticket_events").fetchone()[0] == 11
     connection.close()

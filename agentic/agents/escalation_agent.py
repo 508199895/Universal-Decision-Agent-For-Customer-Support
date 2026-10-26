@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from typing import Dict, Any
+from pydantic import BaseModel, ConfigDict, Field
+from langchain.agents import create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable
 
 
-def build_escalation_agent(*, model: BaseChatModel) -> Runnable:
+class EscalationMaterial(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    summary: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+
+
+def build_escalation_agent(*, model: BaseChatModel, middleware=(), context_schema=None):
     """
     Escalation Agent.
     """
@@ -17,21 +22,14 @@ def build_escalation_agent(*, model: BaseChatModel) -> Runnable:
         "summary: a concise summary of the customer's request and current outcome.\n"
         "description: a concrete account of relevant conversation, evidence, attempted handling, "
         "known or unresolved business facts, and why human help is needed.\n"
-        "Use only facts present in the conversation; preserve uncertainty and do not invent details.\n\n"
-        'Return JSON with exactly these keys: "summary" and "description".\n'
-        "Return ONLY valid JSON."
+        "Use only facts present in the conversation; preserve uncertainty and do not invent details."
     )
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system),
-            (
-                "human",
-                "Full ticket conversation:\n{conversation}\n\n"
-                "Return ONLY JSON."
-            ),
-        ]
+    return create_agent(
+        model=model,
+        tools=[],
+        system_prompt=system,
+        response_format=EscalationMaterial,
+        middleware=list(middleware),
+        context_schema=context_schema,
     )
-
-    chain: Runnable = prompt | model.with_structured_output(method="json_mode")
-    return chain

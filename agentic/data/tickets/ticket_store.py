@@ -37,13 +37,16 @@ class TicketRecord:
     user_id: str
     status: str
     tokens: int
+    input_tokens: int
+    output_tokens: int
+    llm_call_count: int
     created_at: str
     updated_at: str
     created: bool
 
 
 class TicketEventStore:
-    """Persist the six ticket fields and user-scoped append-only events."""
+    """Persist ticket state, model usage and user-scoped append-only events."""
 
     def __init__(self, database: str | Path, *, timeout: float = 10.0) -> None:
         self.database = str(database)
@@ -66,6 +69,9 @@ class TicketEventStore:
                     user_id TEXT NOT NULL,
                     status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed')),
                     tokens INTEGER NOT NULL DEFAULT 0 CHECK (tokens >= 0),
+                    input_tokens INTEGER NOT NULL DEFAULT 0 CHECK (input_tokens >= 0),
+                    output_tokens INTEGER NOT NULL DEFAULT 0 CHECK (output_tokens >= 0),
+                    llm_call_count INTEGER NOT NULL DEFAULT 0 CHECK (llm_call_count >= 0),
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
@@ -92,6 +98,14 @@ class TicketEventStore:
                     ON ticket_events (user_id, ticket_id, seq);
                 """
             )
+            columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(tickets)")
+            }
+            for name in ("input_tokens", "output_tokens", "llm_call_count"):
+                if name not in columns:
+                    connection.execute(
+                        f"ALTER TABLE tickets ADD COLUMN {name} INTEGER NOT NULL DEFAULT 0"
+                    )
         except sqlite3.Error as error:
             raise TicketPersistenceError(f"could not initialize agent ticket database: {error}") from error
         finally:
@@ -139,7 +153,9 @@ class TicketEventStore:
                     metadata=initial_metadata or {},
                 )
             connection.commit()
-            return TicketRecord(ticket_id, user_id, status, tokens, created_at, updated_at, True)
+            return TicketRecord(
+                ticket_id, user_id, status, tokens, 0, 0, 0, created_at, updated_at, True,
+            )
         except TicketEventStoreError:
             connection.rollback()
             raise
@@ -275,15 +291,18 @@ class TicketEventStore:
     def status(self, ticket_id: str) -> str:
         return self.get_ticket(ticket_id).status
 
-    def add_tokens(self, ticket_id: str, tokens: int) -> None:
-        if type(tokens) is not int or tokens < 0:
-            raise ValueError("tokens must be a non-negative integer")
+    def save_token_usage(self, ticket_id: str, *, input_tokens: int, output_tokens: int,
+                         total_tokens: int, llm_call_count: int) -> None:
+        values = (input_tokens, output_tokens, total_tokens, llm_call_count)
+        if any(type(value) is not int or value < 0 for value in values):
+            raise ValueError("token usage values must be non-negative integers")
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
             cursor = connection.execute(
-                "UPDATE tickets SET tokens = tokens + ?, updated_at = ? WHERE ticket_id = ?",
-                (tokens, _utc_now(), ticket_id),
+                """UPDATE tickets SET input_tokens = ?, output_tokens = ?, tokens = ?,
+                   llm_call_count = ?, updated_at = ? WHERE ticket_id = ?""",
+                (*values[:3], values[3], _utc_now(), ticket_id),
             )
             if cursor.rowcount != 1:
                 raise TicketHistoryConflict(f"ticket {ticket_id} does not exist")
@@ -293,7 +312,7 @@ class TicketEventStore:
             raise
         except sqlite3.Error as error:
             connection.rollback()
-            raise TicketPersistenceError(f"ticket token update failed: {error}") from error
+            raise TicketPersistenceError(f"ticket token usage persistence failed: {error}") from error
         finally:
             connection.close()
 
@@ -465,6 +484,7 @@ class TicketEventStore:
 def _ticket_record(row: sqlite3.Row, *, created: bool) -> TicketRecord:
     return TicketRecord(
         row["ticket_id"], row["user_id"], row["status"], row["tokens"],
+        row["input_tokens"], row["output_tokens"], row["llm_call_count"],
         row["created_at"], row["updated_at"], created,
     )
 

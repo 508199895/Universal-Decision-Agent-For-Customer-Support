@@ -11,7 +11,7 @@ from agentic.data.tickets.ticket_store import (
     TicketPersistenceError,
 )
 from agentic.orchestration.workflow import (
-    PublicAnswerCandidate, PublicAnswerReview, PublicKnowledgeIntent, WorkflowDependencies,
+    PublicAnswerReview, PublicKnowledgeIntent, WorkflowDependencies,
     aenter_ticket, build_workflow,
 )
 from agentic.orchestration.workflow_state import WorkflowState
@@ -21,7 +21,7 @@ class HandoffAgent:
     def __init__(self):
         self.payloads = []
 
-    async def ainvoke(self, payload, config=None):
+    async def ainvoke(self, payload, config=None, context=None):
         self.payloads.append(payload)
         return {
             "summary": "客户请求取消预订，处理结果尚未确认。",
@@ -62,7 +62,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     assert result["ticket"]["ticket_id"] == "ticket-1"
     assert result["ticket"]["status"] == "handed_off"
     assert "messages" not in result["ticket"]
-    assert "[human] 请取消我的预订。" in agent.payloads[0]["conversation"]
+    assert "[human] 请取消我的预订。" in agent.payloads[0]["messages"][0].content
     assert [(item.id, item.type) for item in result["messages"]] == [
         ("customer-1", "human"),
         ("escalation:ticket-1:result", "ai"),
@@ -90,7 +90,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     assert "messages" not in snapshot.values["ticket"]
 
 
-def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path):
+def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path, monkeypatch):
     database = tmp_path / "agent.sqlite"
     store = TicketEventStore(database)
     handoff_agent = HandoffAgent()
@@ -107,17 +107,20 @@ def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path
     support_agent = support_builder.compile()
 
     class RejectingReviewer:
-        def with_structured_output(self, schema):
-            async def invoke(_messages, config=None):
-                if schema is PublicKnowledgeIntent:
-                    return PublicKnowledgeIntent(is_public_knowledge=True)
-                if schema is PublicAnswerCandidate:
-                    return PublicAnswerCandidate(answer="已查询知识库")
-                return PublicAnswerReview(
+        async def ainvoke(self, _messages, config=None):
+            return {
+                "structured_response": PublicAnswerReview(
                     context_relevance=False, faithfulness=False,
                     answer_relevance=False, feedback="证据不足",
-                )
-            return SimpleNamespace(ainvoke=invoke)
+                ),
+            }
+
+    async def intent_agent(_messages, config=None, context=None):
+        return {"structured_response": PublicKnowledgeIntent(is_public_knowledge=True)}
+
+    import agentic.orchestration.workflow as workflow_module
+    monkeypatch.setattr(workflow_module, "_build_public_intent_agent", lambda _model: SimpleNamespace(ainvoke=intent_agent))
+    monkeypatch.setattr(workflow_module, "_build_public_answer_reviewer", lambda _model: RejectingReviewer())
 
     result = asyncio.run(_enter(
         database, store, handoff_agent, ticket_id="ticket-support",
@@ -128,7 +131,7 @@ def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path
 
     assert len(support_calls) == 1
     assert [message.id for message in support_calls[0]] == ["customer-support"]
-    assert "[ai] 已查询知识库" in handoff_agent.payloads[0]["conversation"]
+    assert "[ai] 已查询知识库" in handoff_agent.payloads[0]["messages"][0].content
     assert [message.id for message in result["messages"]][:2] == [
         "customer-support", "support-agent-result",
     ]
@@ -141,7 +144,7 @@ def test_model_failure_keeps_ticket_checkpoint_and_retry_does_not_duplicate_mess
     class FailOnceAgent(HandoffAgent):
         attempts = 0
 
-        async def ainvoke(self, payload, config=None):
+        async def ainvoke(self, payload, config=None, context=None):
             self.attempts += 1
             if self.attempts == 1:
                 raise RuntimeError("temporary model failure")

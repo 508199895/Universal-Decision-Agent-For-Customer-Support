@@ -28,23 +28,32 @@ def test_journal_records_messages_usage_and_tool_metadata(tmp_path):
     async def record():
         await journal.on_chat_model_start({}, [[human]], name="query")
         await journal.on_llm_end(
-            LLMResult(generations=[[ChatGeneration(message=assistant)]]), name="query",
+            LLMResult(generations=[[ChatGeneration(message=assistant)]]),
+            name="query", run_id="run-1",
+        )
+        await journal.on_llm_end(
+            LLMResult(generations=[[ChatGeneration(message=assistant)]]),
+            name="query", run_id="run-1",
         )
         await journal.on_tool_end({"messages": [tool]}, name="lookup")
+        await journal.persist_usage_snapshot()
         await journal.flush()
 
     asyncio.run(record())
     events = store.events(user_id="user-1", ticket_id="ticket-1")
     assert [event["event_type"] for event in events] == [
-        "ticket.created", "llm.human.input", "llm.ai.response", "llm.tool.result",
+        "ticket.created", "llm.human.input", "llm.ai.response", "llm.ai.response",
+        "llm.tool.result",
     ]
-    assert [event["seq"] for event in events] == [1, 2, 3, 4]
+    assert [event["seq"] for event in events] == [1, 2, 3, 4, 5]
     assert events[1]["content"]["id"] == "message-1"
     assert events[2]["metadata"] == {
         "caller": "query", "usage": assistant.usage_metadata,
     }
-    assert events[3]["metadata"] == {"tool_name": "lookup"}
+    assert events[4]["metadata"] == {"tool_name": "lookup"}
     assert store.get_ticket("ticket-1").tokens == 5
+    record = store.get_ticket("ticket-1")
+    assert (record.input_tokens, record.output_tokens, record.llm_call_count) == (3, 2, 1)
 
 
 def test_journal_excludes_agent_summary_as_customer_input(tmp_path):
@@ -78,6 +87,13 @@ def test_invoke_journal_flushes_tail_on_every_exit(tmp_path, exit_kind):
             await active_journal.record_lifecycle(
                 "test.event", "trace", {"value": "buffered"},
             )
+            await active_journal.on_llm_end(
+                LLMResult(generations=[[ChatGeneration(message=AIMessage(
+                    content="answer", id="model-answer",
+                    usage_metadata={"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+                ))]]),
+                run_id="run-finally",
+            )
             if exit_kind == "error":
                 raise RuntimeError("graph failed")
             if exit_kind == "cancel":
@@ -96,6 +112,8 @@ def test_invoke_journal_flushes_tail_on_every_exit(tmp_path, exit_kind):
 
     asyncio.run(invoke())
     events = store.events(user_id="user-1", ticket_id="ticket-1")
+    record = store.get_ticket("ticket-1")
+    assert (record.tokens, record.input_tokens, record.output_tokens, record.llm_call_count) == (3, 1, 2, 1)
     event_types = [event["event_type"] for event in events]
     assert "test.event" in event_types
     if exit_kind == "normal":

@@ -46,12 +46,6 @@ GROUP_DEFAULTS: dict[str, dict[str, Any]] = {
         "feedback": None,
     },
     "escalation": {"description": None, "summary": None},
-    "budget": {
-        "outer_nodes_used": 0,
-        "query_calls_used": 0,
-        "answer_round": 0,
-        "business_calls_used": 0,
-    },
 }
 
 ENUMS = {
@@ -74,7 +68,7 @@ WRITERS: dict[str, dict[str, set[str]]] = {
     "validate": {"validate": {"context_relevance", "faithfulness", "answer_relevance", "next_node", "feedback"}},
     "escalation": {"escalation": {"description", "summary"}},
     # The execution boundary owns identity, status, routing authorization,
-    # validation verdicts, all budgets, and cross-node transitions.
+    # validation verdicts, and cross-node transitions.
     "boundary": {group: set(fields) for group, fields in {
         "ticket": GROUP_DEFAULTS["ticket"],
         "supervisor": GROUP_DEFAULTS["supervisor"],
@@ -84,7 +78,6 @@ WRITERS: dict[str, dict[str, set[str]]] = {
         "account": GROUP_DEFAULTS["account"],
         "validate": GROUP_DEFAULTS["validate"],
         "escalation": GROUP_DEFAULTS["escalation"],
-        "budget": GROUP_DEFAULTS["budget"],
     }.items()},
 }
 
@@ -98,7 +91,6 @@ class WorkflowState(AgentState):
     account: dict[str, Any]
     validate: dict[str, Any]
     escalation: dict[str, Any]
-    budget: dict[str, Any]
 
 
 def initial_state(
@@ -204,12 +196,6 @@ def _validate_field(group: str, field: str, value: Any) -> None:
         _validate_evidence(value)
     elif (group, field) == ("account", "pending_action"):
         _validate_pending_action(value)
-    elif group == "budget":
-        if type(value) is not int or value < 0:
-            raise StateContractError(f"budget.{field} must be a non-negative integer")
-        limits = {"outer_nodes_used": 12, "query_calls_used": 6, "answer_round": 6, "business_calls_used": 3}
-        if value > limits[field]:
-            raise StateContractError(f"budget.{field} exceeds {limits[field]}")
     elif (group, field) == ("supervisor", "intent_version"):
         if type(value) is not int or value < 1:
             raise StateContractError("supervisor.intent_version must be an integer >= 1")

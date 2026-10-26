@@ -17,6 +17,12 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
     support_agents = []
     workflow_agents = []
     graph = object()
+
+    class MiddlewareModel:
+        _llm_type = "fake-chat"
+
+        def with_retry(self):
+            return self
     monkeypatch.setattr(
         workflow,
         "build_workflow",
@@ -28,7 +34,7 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
     monkeypatch.setattr(
         workflow,
         "_default_dependencies",
-        lambda: workflow.WorkflowDependencies(model=object()),
+        lambda: workflow.WorkflowDependencies(model=MiddlewareModel()),
     )
     monkeypatch.setattr(workflow, "acollect_support_tools", lambda: _resolved(("tool",)))
     monkeypatch.setattr(

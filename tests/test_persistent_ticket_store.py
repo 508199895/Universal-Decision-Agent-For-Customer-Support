@@ -20,7 +20,7 @@ from agentic.orchestration.workflow_state import (
 )
 
 
-def test_ticket_schema_contains_only_the_six_business_fields(tmp_path):
+def test_ticket_schema_includes_cumulative_model_usage_fields(tmp_path):
     database = tmp_path / "agent.sqlite"
     store = TicketEventStore(database)
 
@@ -30,7 +30,8 @@ def test_ticket_schema_contains_only_the_six_business_fields(tmp_path):
     connection.close()
 
     assert ticket_columns == [
-        "ticket_id", "user_id", "status", "tokens", "created_at", "updated_at",
+        "ticket_id", "user_id", "status", "tokens", "input_tokens", "output_tokens",
+        "llm_call_count", "created_at", "updated_at",
     ]
     assert event_columns == [
         "event_id", "user_id", "ticket_id", "seq", "event_type", "category",
@@ -99,9 +100,11 @@ def test_event_sequence_is_user_scoped_and_event_owner_is_checked(tmp_path):
 def test_ticket_status_and_token_updates_follow_the_new_contract(tmp_path):
     store = TicketEventStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
-    store.add_tokens("ticket-1", 12)
-    store.add_tokens("ticket-1", 8)
-    assert store.get_ticket("ticket-1").tokens == 20
+    store.save_token_usage(
+        "ticket-1", input_tokens=12, output_tokens=8, total_tokens=20, llm_call_count=2,
+    )
+    record = store.get_ticket("ticket-1")
+    assert (record.tokens, record.input_tokens, record.output_tokens, record.llm_call_count) == (20, 12, 8, 2)
 
     assert store.commit_completed("ticket-1", final_message="处理完成。")
     assert not store.commit_completed("ticket-1", final_message="处理完成。")
@@ -175,11 +178,11 @@ def test_workflow_state_inherits_agent_state_and_keeps_messages_at_the_top_level
     assert "messages" in WorkflowState.__annotations__
     assert {
         "ticket", "supervisor", "query", "clarify", "confirm", "account",
-        "validate", "escalation", "budget",
+        "validate", "escalation",
     } <= WorkflowState.__required_keys__
     assert set(state) == {
         "messages", "ticket", "supervisor", "query", "clarify", "confirm", "account",
-        "validate", "escalation", "budget",
+        "validate", "escalation",
     }
     assert "messages" not in state["ticket"]
     with pytest.raises(StateContractError, match="unknown fields"):
@@ -188,7 +191,6 @@ def test_workflow_state_inherits_agent_state_and_keeps_messages_at_the_top_level
         merge_patch(state, {"ticket": {"owner_id": "attacker"}}, writer="supervisor")
     updated = merge_patch(state, {"query": {"evidence": []}}, writer="query")
     assert updated["query"]["evidence"] == []
-    assert updated["budget"] == state["budget"]
 
 
 def test_state_patch_retains_untouched_fields_and_rejects_invalid_values():
@@ -207,8 +209,8 @@ def test_state_patch_retains_untouched_fields_and_rejects_invalid_values():
     assert patched["query"]["evidence"] == []
     with pytest.raises(StateContractError, match="invalid supervisor.intent"):
         merge_patch(state, {"supervisor": {"intent": "DONE"}}, writer="supervisor")
-    with pytest.raises(StateContractError, match="non-negative integer"):
-        merge_patch(state, {"budget": {"outer_nodes_used": True}}, writer="boundary")
+    with pytest.raises(StateContractError, match="unknown state group"):
+        merge_patch(state, {"budget": {"outer_nodes_used": 1}}, writer="boundary")
 
 
 def test_compiled_subgraph_shares_parent_agent_state_messages():
