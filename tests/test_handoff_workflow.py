@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -9,7 +10,10 @@ from agentic.data.tickets.ticket_store import (
     TicketEventStore,
     TicketPersistenceError,
 )
-from agentic.orchestration.workflow import aenter_ticket, build_workflow
+from agentic.orchestration.workflow import (
+    PublicAnswerCandidate, PublicAnswerReview, PublicKnowledgeIntent, WorkflowDependencies,
+    aenter_ticket, build_workflow,
+)
 from agentic.orchestration.workflow_state import WorkflowState
 
 
@@ -26,7 +30,7 @@ class HandoffAgent:
 
 
 async def _enter(database, store, agent, *, ticket_id, message, new_ticket=True, workflow=None,
-                 support_agent=None):
+                 support_agent=None, dependencies=None):
     if workflow is not None:
         return await aenter_ticket(
             "external-1", message, user_id="user-1", user_name="One",
@@ -36,7 +40,7 @@ async def _enter(database, store, agent, *, ticket_id, message, new_ticket=True,
     async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
         graph = build_workflow(
             checkpointer=checkpointer, ticket_event_store=store, agent=agent,
-            support_agent=support_agent,
+            support_agent=support_agent, dependencies=dependencies,
         )
         return await aenter_ticket(
             "external-1", message, user_id="user-1", user_name="One",
@@ -102,10 +106,24 @@ def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path
     support_builder.add_edge("support", END)
     support_agent = support_builder.compile()
 
+    class RejectingReviewer:
+        def with_structured_output(self, schema):
+            async def invoke(_messages, config=None):
+                if schema is PublicKnowledgeIntent:
+                    return PublicKnowledgeIntent(is_public_knowledge=True)
+                if schema is PublicAnswerCandidate:
+                    return PublicAnswerCandidate(answer="已查询知识库")
+                return PublicAnswerReview(
+                    context_relevance=False, faithfulness=False,
+                    answer_relevance=False, feedback="证据不足",
+                )
+            return SimpleNamespace(ainvoke=invoke)
+
     result = asyncio.run(_enter(
         database, store, handoff_agent, ticket_id="ticket-support",
         message=HumanMessage(content="怎么退订？", id="customer-support"),
         support_agent=support_agent,
+        dependencies=WorkflowDependencies(model=RejectingReviewer()),
     ))
 
     assert len(support_calls) == 1
