@@ -194,6 +194,70 @@ def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path)
     assert result["ticket"]["status"] == "handed_off"
     assert store.status("ticket-1") == "completed"
     assert [item.id for item in result["messages"]].count("customer-1") == 1
+    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    event_types = [event["event_type"] for event in events]
+    assert store.get_ticket("ticket-1").user_id == "user-1"
+    assert event_types.count("ticket.created") == 1
+    assert event_types.count("ticket.message.received") == 1
+    assert event_types.count("checkpoint.initialized") == 1
+    assert event_types.count("ticket.completed") == 1
+    assert len(agent.payloads) == 1
+
+
+def test_checkpoint_saved_before_initialization_marker_recovers_idempotently(tmp_path):
+    database = tmp_path / "agent.sqlite"
+    store = TicketEventStore(database)
+    agent = HandoffAgent()
+    message = HumanMessage(content="请取消我的预订。", id="customer-1")
+    mark_initialized = store.mark_checkpoint_initialized
+    interruptions = 0
+
+    def interrupt_before_marker(ticket_id):
+        nonlocal interruptions
+        interruptions += 1
+        if interruptions == 1:
+            raise OSError("process interrupted before initialization marker")
+        mark_initialized(ticket_id)
+
+    store.mark_checkpoint_initialized = interrupt_before_marker
+
+    try:
+        asyncio.run(_enter(database, store, agent, ticket_id="ticket-1", message=message))
+    except OSError as error:
+        assert "before initialization marker" in str(error)
+    else:
+        raise AssertionError("initialization marker interruption should escape")
+
+    assert store.status("ticket-1") == "pending"
+    assert not store.checkpoint_initialized("ticket-1")
+
+    async def read_persisted_checkpoint():
+        async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
+            graph = build_workflow(
+                checkpointer=checkpointer, ticket_event_store=store, agent=agent,
+            )
+            return await graph.aget_state({"configurable": {"thread_id": "user-1"}})
+
+    interrupted_snapshot = asyncio.run(read_persisted_checkpoint())
+    assert interrupted_snapshot.values["ticket"]["ticket_id"] == "ticket-1"
+    assert [item.id for item in interrupted_snapshot.values["messages"]] == ["customer-1"]
+
+    # _enter opens a new saver and compiles a new graph for each invocation.
+    result = asyncio.run(_enter(
+        database, store, agent, ticket_id="ticket-1", message=message, new_ticket=False,
+    ))
+
+    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    event_types = [event["event_type"] for event in events]
+    assert store.get_ticket("ticket-1").user_id == "user-1"
+    assert event_types.count("ticket.created") == 1
+    assert event_types.count("ticket.message.received") == 1
+    assert event_types.count("checkpoint.initialized") == 1
+    assert event_types.count("ticket.completed") == 1
+    assert result["ticket"]["ticket_id"] == "ticket-1"
+    assert [item.id for item in result["messages"]].count("customer-1") == 1
+    assert store.status("ticket-1") == "completed"
+    assert len(agent.payloads) == 1
 
 
 def test_initialized_ticket_without_checkpoint_reports_recovery_error(tmp_path):
