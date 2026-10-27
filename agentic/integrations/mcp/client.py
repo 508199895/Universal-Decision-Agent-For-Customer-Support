@@ -11,6 +11,9 @@ from langchain_core.tools import BaseTool, StructuredTool
 
 # Global adapter instance (lazy init)
 _client: MCPAdapter | None = None
+_client_config: Dict[str, Any] | None = None
+_tools_cache: List[BaseTool] | None = None
+_tools_cache_lock = asyncio.Lock()
 
 # Resolve project root (uda-hub/)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -62,16 +65,21 @@ async def aget_client() -> MCPAdapter:
 
     Safe to use inside Jupyter and async code.
     """
-    global _client
-    if _client is None:
-        _client = MCPAdapter(_build_connections_config())
+    global _client, _client_config, _tools_cache
+    config = _build_connections_config()
+    if _client is None or config != _client_config:
+        _client = MCPAdapter(config)
+        _client_config = config
+        _tools_cache = None
     return _client
 
 
 def clear_client() -> None:
     """Drop the cached adapter after all MCP tool calls have completed."""
-    global _client
+    global _client, _client_config, _tools_cache
     _client = None
+    _client_config = None
+    _tools_cache = None
 
 
 def _normalize_text_result(result: Any) -> Any:
@@ -111,11 +119,16 @@ async def aget_tools_for_servers(*servers: str) -> List[BaseTool]:
     MCPAdapter namespaces tools from a multi-server config as
     `<server>_<upstream_tool>`, so requested servers are filtered by namespace.
     """
+    global _tools_cache
     client = await aget_client()
-    all_tools = [
-        _with_text_result_compatibility(tool)
-        for tool in await client.list_tools()
-    ]
+    if _tools_cache is None:
+        async with _tools_cache_lock:
+            if _tools_cache is None:
+                _tools_cache = [
+                    _with_text_result_compatibility(tool)
+                    for tool in await client.list_tools()
+                ]
+    all_tools = _tools_cache
 
     if not servers:
         return all_tools
