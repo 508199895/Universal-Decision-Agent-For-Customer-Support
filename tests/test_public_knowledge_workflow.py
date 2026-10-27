@@ -5,11 +5,11 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 
 from agentic.data.tickets.ticket_store import TicketEventStore
+from agentic.agents.agent import AgentSet
 from agentic.orchestration.handoff import HANDOFF_NOTICE
 from agentic.orchestration.workflow import (
-    PublicAnswerReview,
-    PublicKnowledgeIntent,
-    WorkflowDependencies,
+    ValidateResult,
+    SupervisorIntentResult,
     _public_evidence,
     aenter_ticket,
     build_workflow,
@@ -59,28 +59,21 @@ def _support_agent(answer):
     return builder.compile()
 
 
-def _run(tmp_path, model, *, draft="候选草稿。", question="退订规则是什么？", monkeypatch=None):
+def _run(tmp_path, model, *, draft="候选草稿。", question="退订规则是什么？"):
     database = tmp_path / "agent.sqlite"
     store = TicketEventStore(database)
 
     async def execute():
-        if monkeypatch is not None:
-            import agentic.orchestration.workflow as workflow_module
-            monkeypatch.setattr(
-                workflow_module, "_build_public_intent_agent",
-                lambda _model: _StructuredAgent(model, PublicKnowledgeIntent),
-            )
-            monkeypatch.setattr(
-                workflow_module, "_build_public_answer_reviewer",
-                lambda _model: _StructuredAgent(model, PublicAnswerReview),
-            )
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
                 checkpointer=checkpointer,
                 ticket_event_store=store,
-                dependencies=WorkflowDependencies(model=model),
-                agent=_HandoffAgent(),
-                support_agent=_support_agent(draft),
+                agents=AgentSet(
+                    escalation=_HandoffAgent(),
+                    query=_support_agent(draft),
+                    supervisor=_StructuredAgent(model, SupervisorIntentResult),
+                    validate=_StructuredAgent(model, ValidateResult),
+                ),
             )
             result = await aenter_ticket(
                 "external-1", HumanMessage(content=question, id="customer-1"),
@@ -92,18 +85,18 @@ def _run(tmp_path, model, *, draft="候选草稿。", question="退订规则是�
     return asyncio.run(execute()), store
 
 
-def test_public_answer_is_committed_only_after_all_three_checks_pass(tmp_path, monkeypatch):
+def test_public_answer_is_committed_only_after_all_three_checks_pass(tmp_path):
     model = _StructuredModel([
-        PublicKnowledgeIntent(is_public_knowledge=True),
-        PublicAnswerReview(
+        SupervisorIntentResult(is_public_knowledge=True),
+        ValidateResult(
             context_relevance=True, faithfulness=True,
             answer_relevance=True, feedback="",
         ),
     ])
 
-    state, store = _run(tmp_path, model, draft="已核实的退订规则。", monkeypatch=monkeypatch)
+    state, store = _run(tmp_path, model, draft="已核实的退订规则。")
 
-    assert model.schemas == [PublicKnowledgeIntent, PublicAnswerReview]
+    assert model.schemas == [SupervisorIntentResult, ValidateResult]
     assert state["ticket"]["status"] == "completed"
     assert state["query"]["validated"] is True
     assert state["supervisor"]["message"] == "已核实的退订规则。"
@@ -114,16 +107,16 @@ def test_public_answer_is_committed_only_after_all_three_checks_pass(tmp_path, m
     assert events[-1]["content"]["message"] == "已核实的退订规则。"
 
 
-def test_public_answer_that_fails_review_is_handed_off_without_leaking_candidate(tmp_path, monkeypatch):
+def test_public_answer_that_fails_review_is_handed_off_without_leaking_candidate(tmp_path):
     model = _StructuredModel([
-        PublicKnowledgeIntent(is_public_knowledge=True),
-        PublicAnswerReview(
+        SupervisorIntentResult(is_public_knowledge=True),
+        ValidateResult(
             context_relevance=True, faithfulness=False,
             answer_relevance=True, feedback="材料没有支持该承诺。",
         ),
     ])
 
-    state, store = _run(tmp_path, model, draft="未经证实的退订承诺。", monkeypatch=monkeypatch)
+    state, store = _run(tmp_path, model, draft="未经证实的退订承诺。")
 
     assert state["ticket"]["status"] == "handed_off"
     assert state["query"]["validated"] is False
@@ -132,27 +125,27 @@ def test_public_answer_that_fails_review_is_handed_off_without_leaking_candidate
     assert store.status("ticket-1") == "completed"
 
 
-def test_invalid_review_structure_hands_off(tmp_path, monkeypatch):
+def test_invalid_review_structure_hands_off(tmp_path):
     model = _StructuredModel([
-        PublicKnowledgeIntent(is_public_knowledge=True),
+        SupervisorIntentResult(is_public_knowledge=True),
         {"unexpected": "not an answer"},
     ])
 
-    state, _store = _run(tmp_path, model, monkeypatch=monkeypatch)
+    state, _store = _run(tmp_path, model)
 
-    assert model.schemas == [PublicKnowledgeIntent, PublicAnswerReview]
+    assert model.schemas == [SupervisorIntentResult, ValidateResult]
     assert state["ticket"]["status"] == "handed_off"
     assert state["validate"]["context_relevance"] is None
     assert state["query"]["validated"] is None
     assert customer_message_for_state(state) == HANDOFF_NOTICE
 
 
-def test_account_action_intent_bypasses_public_answer_generation(tmp_path, monkeypatch):
-    model = _StructuredModel([PublicKnowledgeIntent(is_public_knowledge=False)])
+def test_account_action_intent_bypasses_public_answer_generation(tmp_path):
+    model = _StructuredModel([SupervisorIntentResult(is_public_knowledge=False)])
 
-    state, _store = _run(tmp_path, model, question="请取消我的预订", monkeypatch=monkeypatch)
+    state, _store = _run(tmp_path, model, question="请取消我的预订")
 
-    assert model.schemas == [PublicKnowledgeIntent]
+    assert model.schemas == [SupervisorIntentResult]
     assert state["ticket"]["status"] == "handed_off"
     assert state["supervisor"]["intent"] == "escalation"
     assert customer_message_for_state(state) == HANDOFF_NOTICE

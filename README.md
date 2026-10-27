@@ -289,9 +289,11 @@ Run interactive mode:
 ## Running Tests
 
 ```
-.\.venv\python.exe -m pytest -q
+.\.venv\python.exe -m pytest --basetemp=.pytest-tmp-current -q
 
 ```
+
+Pytest clears `.pytest-tmp-current` before each run; reserve this directory for test output.
 
 You should see the test output as:
 

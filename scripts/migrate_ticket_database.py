@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
+from agentic.agents.agent import AgentSet
 from agentic.data.tickets.ticket_store import TicketEventStore
 from agentic.orchestration.workflow_state import initial_state
 from agentic.orchestration.workflow import build_workflow
@@ -157,7 +158,8 @@ async def _seed_latest_active_checkpoints(
     store: TicketEventStore, checkpointer: BaseCheckpointSaver,
 ) -> list[str]:
     graph = build_workflow(
-        checkpointer=checkpointer, ticket_event_store=store, agent=_MigrationAgent(),
+        checkpointer=checkpointer, ticket_event_store=store,
+        agents=AgentSet(escalation=_MigrationAgent()),
     )
     by_user: dict[str, list[LegacyTicket]] = {}
     messages_by_ticket: dict[str, list[LegacyMessage]] = {}

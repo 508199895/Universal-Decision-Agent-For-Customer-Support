@@ -7,7 +7,14 @@ from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.tools import StructuredTool
 
-from agentic.agents import customer_support_agent
+from agentic.agents import agent as agent_module
+from agentic.agents.agent import (
+    AGENT_NAMES,
+    AgentConfig,
+    _resolve_agent_config,
+    build_agent,
+    get_agent_soul,
+)
 from agentic.capabilities import support_toolset
 
 
@@ -58,6 +65,41 @@ def test_collection_is_once_and_excludes_non_support_tools(monkeypatch):
     assert {tool.name for tool in selected} == support_toolset.REQUIRED_SUPPORT_TOOL_NAMES
 
 
+def test_agent_tool_allowlists_are_limited_by_role(monkeypatch):
+    monkeypatch.setattr(agent_module, "build_ticket_middleware", lambda _model: [])
+    available_tools = support_toolset.validate_support_tools(_configured_tools())
+    model = GenericFakeChatModel(messages=iter([]))
+    expected_tools = {
+        "supervisor": set(),
+        "query": {"qdrant_qdrant-find"},
+        "validate": set(),
+        "escalation": set(),
+    }
+
+    for name in AGENT_NAMES:
+        config = _resolve_agent_config(
+            name,
+            get_agent_soul(name),
+            model=model,
+            available_tools=available_tools,
+        )
+        assert {tool.name for tool in config.tools} == expected_tools[name]
+
+
+def test_missing_tools_config_defaults_to_no_tools(monkeypatch):
+    monkeypatch.setattr(agent_module, "build_ticket_middleware", lambda _model: [])
+    raw_config = dict(get_agent_soul("query"))
+    raw_config.pop("tools")
+    config = _resolve_agent_config(
+        "query",
+        raw_config,
+        model=GenericFakeChatModel(messages=iter([])),
+        available_tools=support_toolset.validate_support_tools(_configured_tools()),
+    )
+
+    assert config.tools == ()
+
+
 def test_agent_calls_qdrant_rag_and_ignores_unselected_tools():
     class ControlledToolCallingModel(GenericFakeChatModel):
         def bind_tools(self, tools, **_kwargs):
@@ -81,10 +123,12 @@ def test_agent_calls_qdrant_rag_and_ignores_unselected_tools():
     ]))
     tools = [tool for tool in _configured_tools() if tool.name != qdrant_tool.name]
     tools.append(qdrant_tool)
-    agent = customer_support_agent.build_customer_support_agent(
+    agent = build_agent(AgentConfig(
         model=model,
-        tools=[*tools, _tool("memory_memory_search")],
-    )
+        tools=support_toolset.validate_support_tools(
+            [*tools, _tool("memory_memory_search")],
+        ),
+    ))
 
     result = asyncio.run(agent.ainvoke({"messages": [("human", "Check my account")]}))
 

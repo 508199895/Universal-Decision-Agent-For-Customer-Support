@@ -50,6 +50,10 @@ env/
 **/tmp/
 **/temp/
 
+# SQLite transient journal files
+*-shm
+*-wal
+
 # Pytest/evaluation work directories
 **/.pytest-*/
 **/.pytest-temp-*/
@@ -70,6 +74,7 @@ env/
 /*.md
 !/README.md
 /AGENTS.md
+/agentic/agents/history/
 
 
 
@@ -78,3 +83,5 @@ env/
 
 
 
+.scratch/customer-support-v6/map.md
+.scratch/customer-support-v6/map.md

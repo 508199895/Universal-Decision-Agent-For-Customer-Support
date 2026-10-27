@@ -7,6 +7,7 @@ import pytest
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+from agentic.agents.agent import AgentSet
 from agentic.app import cli
 from agentic.capabilities.support_toolset import SupportToolConfigurationError
 from agentic.orchestration import workflow
@@ -14,9 +15,13 @@ from agentic.orchestration import workflow
 
 def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypatch):
     checkpointers = []
-    support_agents = []
+    agent_builds = []
     workflow_agents = []
     graph = object()
+    agents = AgentSet(
+        query=object(), escalation=object(),
+        supervisor=object(), validate=object(),
+    )
 
     class MiddlewareModel:
         _llm_type = "fake-chat"
@@ -27,7 +32,7 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
         workflow,
         "build_workflow",
         lambda **kwargs: checkpointers.append(kwargs["checkpointer"])
-        or workflow_agents.append(kwargs.get("support_agent"))
+        or workflow_agents.append(kwargs.get("agents"))
         or graph,
     )
     monkeypatch.setattr(workflow, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
@@ -39,8 +44,8 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
     monkeypatch.setattr(workflow, "acollect_support_tools", lambda: _resolved(("tool",)))
     monkeypatch.setattr(
         workflow,
-        "build_customer_support_agent",
-        lambda **kwargs: support_agents.append({**kwargs, "agent": object()}) or support_agents[-1]["agent"],
+        "build_agent_set",
+        lambda **kwargs: agent_builds.append(kwargs) or agents,
     )
 
     async def exercise_runtime():
@@ -49,9 +54,9 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
             assert event_store.database == str(tmp_path / "agent.sqlite")
             assert len(checkpointers) == 1
             assert isinstance(checkpointers[0], AsyncSqliteSaver)
-            assert len(support_agents) == 1
-            assert support_agents[0]["tools"] == ("tool",)
-            assert workflow_agents == [support_agents[0]["agent"]]
+            assert len(agent_builds) == 1
+            assert agent_builds[0]["tools"] == ("tool",)
+            assert workflow_agents == [agents]
 
     asyncio.run(exercise_runtime())
 

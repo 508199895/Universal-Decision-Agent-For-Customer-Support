@@ -6,12 +6,13 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 import pytest
 
+from agentic.agents.agent import AgentSet
 from agentic.data.tickets.ticket_store import (
     TicketEventStore,
     TicketPersistenceError,
 )
 from agentic.orchestration.workflow import (
-    PublicAnswerReview, PublicKnowledgeIntent, WorkflowDependencies,
+    ValidateResult, SupervisorIntentResult,
     aenter_ticket, build_workflow,
 )
 from agentic.orchestration.workflow_state import WorkflowState
@@ -30,7 +31,7 @@ class HandoffAgent:
 
 
 async def _enter(database, store, agent, *, ticket_id, message, new_ticket=True, workflow=None,
-                 support_agent=None, dependencies=None):
+                 query_agent=None, supervisor_agent=None, validate_agent=None):
     if workflow is not None:
         return await aenter_ticket(
             "external-1", message, user_id="user-1", user_name="One",
@@ -39,8 +40,13 @@ async def _enter(database, store, agent, *, ticket_id, message, new_ticket=True,
         )
     async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
         graph = build_workflow(
-            checkpointer=checkpointer, ticket_event_store=store, agent=agent,
-            support_agent=support_agent, dependencies=dependencies,
+            checkpointer=checkpointer, ticket_event_store=store,
+            agents=AgentSet(
+                escalation=agent,
+                query=query_agent,
+                supervisor=supervisor_agent,
+                validate=validate_agent,
+            ),
         )
         return await aenter_ticket(
             "external-1", message, user_id="user-1", user_name="One",
@@ -81,7 +87,8 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     async def read_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store, agent=agent,
+                checkpointer=checkpointer, ticket_event_store=store,
+                agents=AgentSet(escalation=agent),
             )
             return await graph.aget_state({"configurable": {"thread_id": "user-1"}})
 
@@ -90,7 +97,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     assert "messages" not in snapshot.values["ticket"]
 
 
-def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path, monkeypatch):
+def test_query_agent_runs_before_handoff_and_shares_messages(tmp_path):
     database = tmp_path / "agent.sqlite"
     store = TicketEventStore(database)
     handoff_agent = HandoffAgent()
@@ -109,24 +116,21 @@ def test_customer_support_agent_runs_before_handoff_and_shares_messages(tmp_path
     class RejectingReviewer:
         async def ainvoke(self, _messages, config=None):
             return {
-                "structured_response": PublicAnswerReview(
+                "structured_response": ValidateResult(
                     context_relevance=False, faithfulness=False,
                     answer_relevance=False, feedback="证据不足",
                 ),
             }
 
     async def intent_agent(_messages, config=None, context=None):
-        return {"structured_response": PublicKnowledgeIntent(is_public_knowledge=True)}
-
-    import agentic.orchestration.workflow as workflow_module
-    monkeypatch.setattr(workflow_module, "_build_public_intent_agent", lambda _model: SimpleNamespace(ainvoke=intent_agent))
-    monkeypatch.setattr(workflow_module, "_build_public_answer_reviewer", lambda _model: RejectingReviewer())
+        return {"structured_response": SupervisorIntentResult(is_public_knowledge=True)}
 
     result = asyncio.run(_enter(
         database, store, handoff_agent, ticket_id="ticket-support",
         message=HumanMessage(content="怎么退订？", id="customer-support"),
-        support_agent=support_agent,
-        dependencies=WorkflowDependencies(model=RejectingReviewer()),
+        query_agent=support_agent,
+        supervisor_agent=SimpleNamespace(ainvoke=intent_agent),
+        validate_agent=RejectingReviewer(),
     ))
 
     assert len(support_calls) == 1
@@ -190,7 +194,8 @@ def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path)
     async def fail_initial_write():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store, agent=agent,
+                checkpointer=checkpointer, ticket_event_store=store,
+                agents=AgentSet(escalation=agent),
             )
             try:
                 await aenter_ticket(
@@ -255,7 +260,8 @@ def test_checkpoint_saved_before_initialization_marker_recovers_idempotently(tmp
     async def read_persisted_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store, agent=agent,
+                checkpointer=checkpointer, ticket_event_store=store,
+                agents=AgentSet(escalation=agent),
             )
             return await graph.aget_state({"configurable": {"thread_id": "user-1"}})
 
@@ -294,7 +300,8 @@ def test_initialized_ticket_without_checkpoint_reports_recovery_error(tmp_path):
     async def enter_without_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store, agent=agent,
+                checkpointer=checkpointer, ticket_event_store=store,
+                agents=AgentSet(escalation=agent),
             )
             with pytest.raises(TicketPersistenceError, match="checkpoint marked initialized but missing"):
                 await aenter_ticket(

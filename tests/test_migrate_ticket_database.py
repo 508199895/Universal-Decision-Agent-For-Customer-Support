@@ -4,6 +4,7 @@ from pathlib import Path
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+from agentic.agents.agent import AgentSet
 from scripts.migrate_ticket_database import migrate_legacy_database
 from agentic.data.tickets.ticket_store import TicketEventStore
 from agentic.orchestration.workflow import build_workflow
@@ -108,7 +109,8 @@ def test_migration_preserves_history_and_seeds_latest_active_user_checkpoints(tm
     async def read_checkpoints():
         async with AsyncSqliteSaver.from_conn_string(str(target)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store, agent=object(),
+                checkpointer=checkpointer, ticket_event_store=store,
+                agents=AgentSet(escalation=object()),
             )
             states = {}
             for user_id in ("user-a", "user-b"):
