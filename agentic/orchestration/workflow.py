@@ -33,7 +33,7 @@ from langgraph.types import RunnableConfig
 from agentic.agents.escalation_agent import build_escalation_agent
 from agentic.agents.customer_support_agent import build_customer_support_agent
 from agentic.agents.escalation_agent import EscalationMaterial
-from agentic.agents.token_control import (
+from agentic.capabilities.middleware.token_control import (
     DEFAULT_MAX_OUTPUT_TOKENS, TicketRuntimeContext,
     TICKET_TOKEN_LIMIT, TicketTokenLimitExceeded, build_ticket_middleware,
 )

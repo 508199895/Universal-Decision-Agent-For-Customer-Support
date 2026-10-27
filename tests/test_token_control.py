@@ -8,7 +8,7 @@ from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 
-from agentic.agents.token_control import (
+from agentic.capabilities.middleware.token_control import (
     CONTEXT_SUMMARIZATION_THRESHOLD,
     TicketRuntimeContext,
     TicketTokenBudgetMiddleware,
