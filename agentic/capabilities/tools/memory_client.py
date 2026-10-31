@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from langchain_core.tools import BaseTool
 
-from agentic.integrations.mcp.client import aget_tools_for_servers, get_tools_for_servers
+from agentic.capabilities.mcp.client import aget_tools_for_servers, get_tools_for_servers
 
 
 # ---------- Async versions ----------

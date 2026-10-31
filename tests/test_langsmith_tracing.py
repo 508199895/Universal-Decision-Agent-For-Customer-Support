@@ -6,7 +6,7 @@ from langsmith.anonymizer import create_secret_anonymizer
 
 from agentic.observability import langsmith_tracing
 from agentic.observability.langsmith_tracing import build_trace_config
-from agentic.orchestration.workflow import _invoke_with_journal
+from agentic.orchestration.orchestration import _invoke_with_journal
 
 
 def test_secret_anonymizer_redacts_secret_formats_but_preserves_other_trace_data():
@@ -82,7 +82,7 @@ def test_workflow_invocation_attaches_ticket_trace_settings(monkeypatch):
         "callbacks": ["langsmith-tracer"],
     }
     monkeypatch.setattr(
-        "agentic.orchestration.workflow.build_trace_config", lambda ticket_id: trace_config,
+        "agentic.orchestration.orchestration.build_trace_config", lambda ticket_id: trace_config,
     )
 
     class Workflow:

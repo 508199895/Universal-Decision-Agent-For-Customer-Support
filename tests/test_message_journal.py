@@ -4,13 +4,13 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 
-from agentic.data.tickets.message_journal import TicketJournal
-from agentic.data.tickets.ticket_store import TicketEventStore
-from agentic.orchestration.workflow import _invoke_with_journal
+from agentic.data.tickets.ticket_journal import TicketJournal
+from agentic.data.tickets.TicketStore import TicketStore
+from agentic.orchestration.orchestration import _invoke_with_journal
 
 
 def _store_with_ticket(path):
-    store = TicketEventStore(path)
+    store = TicketStore(path)
     store.create_ticket(ticket_id="ticket-1", user_id="user-1")
     return store
 
@@ -40,7 +40,7 @@ def test_journal_records_messages_usage_and_tool_metadata(tmp_path):
         await journal.flush()
 
     asyncio.run(record())
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     assert [event["event_type"] for event in events] == [
         "ticket.created", "llm.human.input", "llm.ai.response", "llm.ai.response",
         "llm.tool.result",
@@ -70,7 +70,7 @@ def test_journal_excludes_agent_summary_as_customer_input(tmp_path):
         await journal.flush()
 
     asyncio.run(record())
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     assert [event["event_type"] for event in events] == ["ticket.created", "llm.human.input"]
     assert events[-1]["content"]["id"] == "message-1"
 
@@ -111,7 +111,7 @@ def test_invoke_journal_flushes_tail_on_every_exit(tmp_path, exit_kind):
             assert await _invoke_with_journal(FakeWorkflow(), "user-1", journal) == {"ok": True}
 
     asyncio.run(invoke())
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     record = store.get_ticket("ticket-1")
     assert (record.tokens, record.input_tokens, record.output_tokens, record.llm_call_count) == (3, 1, 2, 1)
     event_types = [event["event_type"] for event in events]
@@ -130,5 +130,5 @@ def test_flush_threshold_writes_events_immediately(tmp_path):
 
     asyncio.run(journal.record_lifecycle("run.start", "trace", {"ticket_id": "ticket-1"}))
 
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     assert [event["event_type"] for event in events] == ["ticket.created", "run.start"]

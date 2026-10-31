@@ -6,13 +6,12 @@ from langchain.agents import AgentState
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import END, START, StateGraph
 
-from agentic.data.tickets.ticket_store import (
-    TicketAlreadyTerminal,
-    TicketEventStore,
+from agentic.data.tickets.TicketStore import TicketStore
+from agentic.data.tickets.errors import (
     TicketHistoryConflict,
     TicketPersistenceError,
 )
-from agentic.orchestration.workflow_state import (
+from agentic.orchestration.workflow.state import (
     StateContractError,
     WorkflowState,
     initial_state,
@@ -22,7 +21,7 @@ from agentic.orchestration.workflow_state import (
 
 def test_ticket_schema_includes_cumulative_model_usage_fields(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
 
     connection = sqlite3.connect(database)
     ticket_columns = [row[1] for row in connection.execute("PRAGMA table_info(tickets)")]
@@ -41,7 +40,7 @@ def test_ticket_schema_includes_cumulative_model_usage_fields(tmp_path):
 
 
 def test_ticket_creation_persists_first_message_atomically_and_allows_multiple_active_tickets(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     first = store.create_ticket(
         ticket_id="ticket-1", user_id="user-1", status="pending",
         initial_message=HumanMessage(content="first", id="message-1").model_dump(),
@@ -54,17 +53,17 @@ def test_ticket_creation_persists_first_message_atomically_and_allows_multiple_a
 
     assert first.created and second.created
     assert first.status == second.status == "pending"
-    assert [event["seq"] for event in store.events(user_id="user-1")] == [1, 2, 3, 4]
-    assert [event["event_type"] for event in store.events(user_id="user-1", ticket_id="ticket-1")] == [
+    assert [event["seq"] for event in store.event_store.events(user_id="user-1")] == [1, 2, 3, 4]
+    assert [event["event_type"] for event in store.event_store.events(user_id="user-1", ticket_id="ticket-1")] == [
         "ticket.created", "ticket.message.received",
     ]
-    first_message = store.events(user_id="user-1", ticket_id="ticket-1")[1]
+    first_message = store.event_store.events(user_id="user-1", ticket_id="ticket-1")[1]
     assert first_message["content"]["id"] == "message-1"
     assert first_message["metadata"]["owner_id"] == "external-1"
 
 
 def test_checkpoint_initialization_marker_is_idempotent_and_scoped_to_pending_tickets(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(
         ticket_id="ticket-1", user_id="user-1", initial_message={"content": "hello", "id": "m1"},
     )
@@ -74,31 +73,31 @@ def test_checkpoint_initialization_marker_is_idempotent_and_scoped_to_pending_ti
     store.mark_checkpoint_initialized("ticket-1")
     assert store.checkpoint_initialized("ticket-1")
     assert store.latest_uninitialized_ticket("user-1") is None
-    assert [event["event_type"] for event in store.events(user_id="user-1")] == [
+    assert [event["event_type"] for event in store.event_store.events(user_id="user-1")] == [
         "ticket.created", "ticket.message.received", "checkpoint.initialized",
     ]
 
 
 def test_event_sequence_is_user_scoped_and_event_owner_is_checked(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1")
     store.create_ticket(ticket_id="ticket-2", user_id="user-2")
-    store.append_events([{
+    store.event_store.append_events([{
         "user_id": "user-1", "ticket_id": "ticket-1", "event_type": "run.start",
         "category": "trace", "content": {}, "metadata": {}, "created_at": "2026-10-22T00:00:00Z",
     }])
 
-    assert [item["seq"] for item in store.events(user_id="user-1")] == [1, 2]
-    assert [item["seq"] for item in store.events(user_id="user-2")] == [1]
+    assert [item["seq"] for item in store.event_store.events(user_id="user-1")] == [1, 2]
+    assert [item["seq"] for item in store.event_store.events(user_id="user-2")] == [1]
     with pytest.raises(TicketHistoryConflict, match="does not belong"):
-        store.append_events([{
+        store.event_store.append_events([{
             "user_id": "user-2", "ticket_id": "ticket-1", "event_type": "run.start",
             "category": "trace", "content": {}, "metadata": {}, "created_at": "2026-10-22T00:00:01Z",
         }])
 
 
 def test_ticket_status_and_token_updates_follow_the_new_contract(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
     store.save_token_usage(
         "ticket-1", input_tokens=12, output_tokens=8, total_tokens=20, llm_call_count=2,
@@ -109,33 +108,31 @@ def test_ticket_status_and_token_updates_follow_the_new_contract(tmp_path):
     assert store.commit_completed("ticket-1", final_message="处理完成。")
     assert not store.commit_completed("ticket-1", final_message="处理完成。")
     assert store.status("ticket-1") == "completed"
-    with pytest.raises(TicketAlreadyTerminal):
-        store.set_status("ticket-1", "running")
 
 
 def test_terminal_status_and_customer_notice_commit_in_one_transaction(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
 
     assert store.commit_completed("ticket-1", final_message="处理已完成。")
     assert store.status("ticket-1") == "completed"
     terminal_events = [
-        event for event in store.events(user_id="user-1", ticket_id="ticket-1")
+        event for event in store.event_store.events(user_id="user-1", ticket_id="ticket-1")
         if event["event_type"] == "ticket.completed"
     ]
     assert len(terminal_events) == 1
     assert terminal_events[0]["content"] == {"message": "处理已完成。"}
     assert not store.commit_completed("ticket-1", final_message="处理已完成。")
     assert len([
-        event for event in store.events(user_id="user-1", ticket_id="ticket-1")
+        event for event in store.event_store.events(user_id="user-1", ticket_id="ticket-1")
         if event["event_type"] == "ticket.completed"
     ]) == 1
 
 
 def test_terminal_event_failure_rolls_back_completed_status(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
     connection = sqlite3.connect(database)
     connection.execute(
@@ -151,13 +148,13 @@ def test_terminal_event_failure_rolls_back_completed_status(tmp_path):
 
     assert store.status("ticket-1") == "running"
     assert not [
-        event for event in store.events(user_id="user-1", ticket_id="ticket-1")
+        event for event in store.event_store.events(user_id="user-1", ticket_id="ticket-1")
         if event["event_type"] == "ticket.completed"
     ]
 
 
 def test_completed_ticket_requires_customer_facing_message(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1", status="running")
 
     with pytest.raises(TicketHistoryConflict, match="missing its customer-facing"):

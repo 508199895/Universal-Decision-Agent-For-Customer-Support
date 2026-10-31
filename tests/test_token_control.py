@@ -10,14 +10,15 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 
 from agentic.capabilities.middleware.token_control import (
     CONTEXT_SUMMARIZATION_THRESHOLD,
+    TICKET_TOKEN_LIMIT,
     TicketRuntimeContext,
     TicketTokenBudgetMiddleware,
     TicketTokenLimitExceeded,
     build_ticket_middleware,
 )
-from agentic.data.tickets.message_journal import TicketJournal
-from agentic.data.tickets.ticket_store import TicketEventStore
-from agentic.orchestration.workflow import _normalize_checkpoint_state
+from agentic.data.tickets.ticket_journal import TicketJournal
+from agentic.data.tickets.TicketStore import TicketStore
+from agentic.orchestration.orchestration import _normalize_checkpoint_state
 
 
 class _MiddlewareModel:
@@ -28,12 +29,10 @@ class _MiddlewareModel:
 
 
 def test_ticket_token_middleware_blocks_before_call_at_the_limit(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1")
-    journal = TicketJournal(
-        store, user_id="user-1", ticket_id="ticket-1", token_limit=200_000,
-    )
-    journal.total_tokens = 200_000
+    journal = TicketJournal(store, user_id="user-1", ticket_id="ticket-1")
+    journal.total_tokens = TICKET_TOKEN_LIMIT
     request = SimpleNamespace(
         runtime=SimpleNamespace(context=TicketRuntimeContext(journal=journal)),
     )
@@ -44,7 +43,7 @@ def test_ticket_token_middleware_blocks_before_call_at_the_limit(tmp_path):
         called = True
         return "model response"
 
-    with pytest.raises(TicketTokenLimitExceeded, match="200000"):
+    with pytest.raises(TicketTokenLimitExceeded, match=str(TICKET_TOKEN_LIMIT)):
         TicketTokenBudgetMiddleware().wrap_model_call(request, handler)
     assert called is False
 
@@ -52,15 +51,15 @@ def test_ticket_token_middleware_blocks_before_call_at_the_limit(tmp_path):
         runtime = SimpleNamespace(context=request.runtime.context)
         await build_ticket_middleware(_MiddlewareModel())[1].abefore_model({}, runtime)
 
-    with pytest.raises(TicketTokenLimitExceeded, match="200000"):
+    with pytest.raises(TicketTokenLimitExceeded, match=str(TICKET_TOKEN_LIMIT)):
         asyncio.run(check_summarizer())
 
 
 def test_agent_middleware_blocks_real_agent_model_call_at_ticket_cap(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1")
     journal = TicketJournal(store, user_id="user-1", ticket_id="ticket-1")
-    journal.total_tokens = journal.token_limit
+    journal.total_tokens = TICKET_TOKEN_LIMIT
     model = FakeListChatModel(responses=["should not be returned"])
     agent = create_agent(
         model=model,
@@ -86,17 +85,15 @@ def test_first_call_usage_reaches_limit_and_next_agent_call_is_blocked(tmp_path)
             return ChatResult(generations=[ChatGeneration(message=AIMessage(
                 content="first response",
                 usage_metadata={
-                    "input_tokens": 150_000,
-                    "output_tokens": 50_000,
-                    "total_tokens": 200_000,
+                    "input_tokens": 15_000_000,
+                    "output_tokens": 5_000_000,
+                    "total_tokens": TICKET_TOKEN_LIMIT,
                 },
             ))])
 
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="ticket-1", user_id="user-1")
-    journal = TicketJournal(
-        store, user_id="user-1", ticket_id="ticket-1", token_limit=200_000,
-    )
+    journal = TicketJournal(store, user_id="user-1", ticket_id="ticket-1")
     model = UsageModel(responses=[])
     agent = create_agent(
         model=model,
@@ -110,7 +107,7 @@ def test_first_call_usage_reaches_limit_and_next_agent_call_is_blocked(tmp_path)
             {"messages": [HumanMessage(content="first question")]},
             config={"callbacks": [journal]}, context=context,
         )
-        assert journal.total_tokens == 200_000
+        assert journal.total_tokens == TICKET_TOKEN_LIMIT
         with pytest.raises(TicketTokenLimitExceeded):
             await agent.ainvoke(
                 {"messages": [HumanMessage(content="second question")]},
@@ -142,7 +139,7 @@ def test_existing_total_token_column_is_preserved_when_usage_columns_are_added(t
     )
     connection.close()
 
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     record = store.get_ticket("ticket-1")
 
     assert (record.tokens, record.input_tokens, record.output_tokens, record.llm_call_count) == (1234, 0, 0, 0)

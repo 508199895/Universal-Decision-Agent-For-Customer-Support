@@ -26,22 +26,25 @@ import asyncio
 import argparse
 import textwrap
 import uuid
+from types import SimpleNamespace
 from typing import Any, Dict
 
 from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
+from agentic.data.tickets.TicketEventStore import TicketEventStore
+from agentic.data.tickets.TicketStore import TicketStore
 
 # Load environment variables
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / ".env")
 
-from agentic.orchestration.workflow import (
-    aenter_ticket,
-    customer_message_for_state,
-    default_workflow_runtime,
-)
+from agentic.orchestration.ticket.manager import TicketManager
+from agentic.orchestration.ticket.request import TicketStartBody
+from agentic.orchestration.orchestration import start_ticket
+from agentic.lifespan.runtime import default_workflow_runtime
+from agentic.capabilities.feishu import create_feishu_channel, send_feishu_text
 
 
 # Helper functions
@@ -59,24 +62,47 @@ def pretty_print_section(title: str, content: Any) -> None:
         print(content)
 
 
-async def _handle_ticket(ticket: Dict[str, Any], workflow, event_store):
+async def _handle_ticket(
+    ticket: Dict[str, Any], workflow, ticket_manager: TicketManager,
+    ticket_store: TicketStore, ticket_event_store: TicketEventStore,
+):
     user_id = ticket["user_id"]
     message = HumanMessage(
         content=ticket["content"],
         id=ticket.get("message_id") or f"customer:{user_id}:{uuid.uuid4()}",
     )
-    return await aenter_ticket(
-        ticket["external_user_id"], message,
-        user_id=user_id,
-        user_name=ticket.get("user_name"),
-        workflow=workflow,
-        ticket_event_store=event_store,
-        ticket_id=ticket.get("ticket_id"),
-        new_ticket=bool(ticket.get("new_ticket", False)),
+    body = TicketStartBody(
+        input={"messages": [{
+            "role": "user", "content": message.content, "id": message.id,
+        }]},
+        metadata=ticket.get("metadata") or {},
+        config=ticket.get("config") or {},
+        context={"model_name": ticket.get("model_name")} if ticket.get("model_name") else {},
+        multitask_strategy=ticket.get("multitask_strategy", "reject"),
     )
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(
+            ticket_manager=ticket_manager,
+            workflow=workflow,
+            ticket_store=ticket_store,
+            ticket_event_store=ticket_event_store,
+        )),
+        state=SimpleNamespace(user=SimpleNamespace(
+            external_user_id=ticket["external_user_id"],
+            user_name=ticket.get("user_name"),
+        )),
+    )
+    record = await start_ticket(body, user_id, request)
+    task = record.task
+    if task is None:
+        raise RuntimeError(f"ticket {record.ticket_id} was not dispatched")
+    return await task
 
 
-async def run_single_ticket_demo(workflow, event_store) -> None:
+async def run_single_ticket_demo(
+    workflow, ticket_manager: TicketManager, ticket_store: TicketStore,
+    ticket_event_store: TicketEventStore,
+) -> None:
     """
     Run the current handoff-only workflow for a sample ticket.
 
@@ -90,12 +116,12 @@ async def run_single_ticket_demo(workflow, event_store) -> None:
         "account_id": "demo-account-cultpass",
         "external_user_id": external_user_id,
         "user_name": "Demo User",
-        "ticket_id": f"DEMO-TICKET-{uuid.uuid4().hex[:8]}",
-        "new_ticket": True,
     }
 
     print("\nRunning UDA-Hub workflow for a demo ticket...")
-    final_state = await _handle_ticket(ticket, workflow, event_store)
+    final_state = await _handle_ticket(
+        ticket, workflow, ticket_manager, ticket_store, ticket_event_store,
+    )
 
     escalation = final_state.get("escalation") or {}
 
@@ -104,11 +130,15 @@ async def run_single_ticket_demo(workflow, event_store) -> None:
     pretty_print_section("交接描述", escalation.get("description"))
 
 
-async def interactive_chat_loop(workflow, event_store) -> None:
+async def interactive_chat_loop(
+    workflow, ticket_manager: TicketManager, ticket_store: TicketStore,
+    ticket_event_store: TicketEventStore,
+) -> None:
     """
     Very simple interactive CLI loop.
 
-    Existing unfinished tickets trigger a fixed continue-or-new prompt.
+    Existing unfinished tickets are continued automatically; completed tickets
+    lead to a fresh ticket on the next message.
 
     This is not a streaming chat; each run exercises one ticket lifecycle.
     """
@@ -139,77 +169,27 @@ async def interactive_chat_loop(workflow, event_store) -> None:
             print("Exiting UDA-Hub CLI. Goodbye!")
             break
 
-        content = user_text
-        new_ticket, continuation_ticket_id = await _should_start_new_ticket(
-            event_store, default_user_id, workflow=workflow,
-        )
-
-        ticket_id = (
-            f"CLI-{uuid.uuid4().hex[:8]}" if new_ticket else continuation_ticket_id
-        )
         ticket: Dict[str, Any] = {
-            "content": content,
+            "content": user_text,
             "user_id": default_user_id,
             "account_id": default_account_id,
             "external_user_id": default_external_user_id,
             "user_name": "CLI User",
-            "ticket_id": ticket_id,
-            "new_ticket": new_ticket,
         }
 
         print("\n[Processing ticket...]")
-        final_state = await _handle_ticket(ticket, workflow, event_store)
-
-        escalation = final_state.get("escalation") or {}
+        final_state = await _handle_ticket(
+            ticket, workflow, ticket_manager, ticket_store, ticket_event_store,
+        )
 
         print("\n--- Result ---")
         print(f"Ticket status: {final_state.get('ticket', {}).get('status')}")
-        customer_message = customer_message_for_state(final_state)
-        if customer_message:
-            print(customer_message)
-
-
-def _continuation_ticket_id(event_store, user_id: str) -> str | None:
-    """Select a continuation candidate, preferring the latest checkpoint ticket."""
-    latest = event_store.latest_checkpoint_ticket(user_id)
-    if latest is not None and latest.status != "completed":
-        return latest.ticket_id
-
-    pending = event_store.latest_uninitialized_ticket(user_id)
-    if pending is not None and pending.status != "completed":
-        return pending.ticket_id
-    return None
-
-
-async def _should_start_new_ticket(
-    event_store, user_id: str, *, workflow=None,
-) -> tuple[bool, str | None]:
-    continuation_ticket_id = _continuation_ticket_id(event_store, user_id)
-    if continuation_ticket_id is not None and workflow is not None:
-        thread_id = event_store.thread_id(user_id)
-        snapshot = await workflow.aget_state({"configurable": {"thread_id": thread_id}})
-        checkpoint_ticket = (snapshot.values or {}).get("ticket", {})
-        if (
-            checkpoint_ticket.get("ticket_id") == continuation_ticket_id
-            and checkpoint_ticket.get("status") in {"completed", "handed_off"}
-        ):
-            pending = event_store.latest_uninitialized_ticket(user_id)
-            continuation_ticket_id = (
-                pending.ticket_id
-                if pending is not None and pending.status != "completed"
-                else None
-            )
-    if continuation_ticket_id is None:
-        return True, None
-
-    while True:
-        answer = (await asyncio.to_thread(
-            input, "检测到有未完成工单，是否继续？",
-        )).strip().lower()
-        if answer in {"是", "y", "yes"}:
-            return False, continuation_ticket_id
-        if answer in {"否", "n", "no"}:
-            return True, None
+        messages = final_state.get("messages") or []
+        if messages:
+            message = messages[-1]
+            content = message.get("content") if isinstance(message, dict) else getattr(message, "content", None)
+            if content:
+                print(content)
 
 
 # CLI
@@ -230,13 +210,28 @@ async def main() -> None:
 
     args = parser.parse_args()
 
-    async with default_workflow_runtime() as (workflow, event_store):
-        if args.mode == "demo":
-            await run_single_ticket_demo(workflow, event_store)
-        elif args.mode == "chat":
-            await interactive_chat_loop(workflow, event_store)
-        else:
-            raise ValueError(f"Unknown mode: {args.mode}")
+    channel, chat_id = create_feishu_channel()
+    try:
+        await channel.connect_until_ready(timeout=30)
+
+        async def send_handoff(text: str) -> str:
+            return await send_feishu_text(channel, chat_id, text)
+
+        async with default_workflow_runtime(handoff_sender=send_handoff) as (
+            workflow, ticket_manager, ticket_store, ticket_event_store,
+        ):
+            if args.mode == "demo":
+                await run_single_ticket_demo(
+                    workflow, ticket_manager, ticket_store, ticket_event_store,
+                )
+            elif args.mode == "chat":
+                await interactive_chat_loop(
+                    workflow, ticket_manager, ticket_store, ticket_event_store,
+                )
+            else:
+                raise ValueError(f"Unknown mode: {args.mode}")
+    finally:
+        await channel.disconnect()
 
 
 if __name__ == "__main__":

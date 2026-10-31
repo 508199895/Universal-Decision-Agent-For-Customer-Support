@@ -76,6 +76,12 @@ env/
 /AGENTS.md
 /agentic/agents/history/
 
+# Local evaluation outputs and archived retrieval snapshots
+/evals/results/
+/agentic/evals/results/
+/evals/datasets/history/
+/agentic/evals/datasets/history/
+
 
 
 
@@ -85,3 +91,6 @@ env/
 
 .scratch/customer-support-v6/map.md
 .scratch/customer-support-v6/map.md
+mcp_services/qdrant/README.md
+mcp_services/qdrant/README.md
+mcp_services/qdrant/history/v2026-10-31-before-collection-default/tool_schema.json

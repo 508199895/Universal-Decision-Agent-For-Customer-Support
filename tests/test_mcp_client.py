@@ -5,7 +5,7 @@ import sys
 import pytest
 from langchain_core.tools import StructuredTool
 
-from agentic.integrations.mcp import client as mcp_client
+from agentic.capabilities.mcp import client as mcp_client
 
 
 def test_connections_config_launches_bundled_qdrant_server() -> None:
@@ -48,6 +48,7 @@ async def test_tools_are_filtered_by_mcp_server_namespace(
         return FakeAdapter()
 
     monkeypatch.setattr(mcp_client, "aget_client", fake_get_adapter)
+    monkeypatch.setattr(mcp_client, "_tools_cache", None)
 
     tools = await mcp_client.aget_tools_for_servers("qdrant")
 

@@ -6,16 +6,15 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 import pytest
 
-from agentic.agents.agent import AgentSet
-from agentic.data.tickets.ticket_store import (
-    TicketEventStore,
-    TicketPersistenceError,
-)
-from agentic.orchestration.workflow import (
+from agentic.data.tickets.TicketStore import TicketStore
+from agentic.data.tickets.errors import TicketPersistenceError
+from agentic.orchestration.workflow.factory import (
     ValidateResult, SupervisorIntentResult,
-    aenter_ticket, build_workflow,
+    build_workflow,
 )
-from agentic.orchestration.workflow_state import WorkflowState
+from agentic.orchestration.ticket.manager import TicketManager
+from agentic.orchestration.orchestration import run_ticket
+from agentic.orchestration.workflow.state import WorkflowState
 
 
 class HandoffAgent:
@@ -31,33 +30,27 @@ class HandoffAgent:
 
 
 async def _enter(database, store, agent, *, ticket_id, message, new_ticket=True, workflow=None,
-                 query_agent=None, supervisor_agent=None, validate_agent=None):
+                 supervisor_agent=None):
     if workflow is not None:
-        return await aenter_ticket(
+        return await run_ticket(TicketManager(store),
             "external-1", message, user_id="user-1", user_name="One",
-            workflow=workflow, ticket_event_store=store,
-            ticket_id=ticket_id, new_ticket=new_ticket,
+            workflow=workflow, ticket_id=ticket_id, new_ticket=new_ticket,
         )
     async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
         graph = build_workflow(
-            checkpointer=checkpointer, ticket_event_store=store,
-            agents=AgentSet(
-                escalation=agent,
-                query=query_agent,
-                supervisor=supervisor_agent,
-                validate=validate_agent,
-            ),
+            checkpointer=checkpointer,
+            escalation_agent=agent,
+            supervisor_agent=supervisor_agent,
         )
-        return await aenter_ticket(
+        return await run_ticket(TicketManager(store),
             "external-1", message, user_id="user-1", user_name="One",
-            workflow=graph, ticket_event_store=store,
-            ticket_id=ticket_id, new_ticket=new_ticket,
+            workflow=graph, ticket_id=ticket_id, new_ticket=new_ticket,
         )
 
 
 def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     agent = HandoffAgent()
     message = HumanMessage(content="请取消我的预订。", id="customer-1")
 
@@ -76,7 +69,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
         ("handoff:ticket-1:notice", "system"),
     ]
     assert store.status("ticket-1") == "completed"
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     assert [event["event_type"] for event in events][:3] == [
         "ticket.created", "ticket.message.received", "checkpoint.initialized",
     ]
@@ -87,8 +80,8 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     async def read_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store,
-                agents=AgentSet(escalation=agent),
+                checkpointer=checkpointer,
+                escalation_agent=agent,
             )
             return await graph.aget_state({"configurable": {"thread_id": "user-1"}})
 
@@ -99,7 +92,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
 
 def test_query_agent_runs_before_handoff_and_shares_messages(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     handoff_agent = HandoffAgent()
     support_calls = []
 
@@ -128,9 +121,7 @@ def test_query_agent_runs_before_handoff_and_shares_messages(tmp_path):
     result = asyncio.run(_enter(
         database, store, handoff_agent, ticket_id="ticket-support",
         message=HumanMessage(content="怎么退订？", id="customer-support"),
-        query_agent=support_agent,
         supervisor_agent=SimpleNamespace(ainvoke=intent_agent),
-        validate_agent=RejectingReviewer(),
     ))
 
     assert len(support_calls) == 1
@@ -143,7 +134,7 @@ def test_query_agent_runs_before_handoff_and_shares_messages(tmp_path):
 
 def test_model_failure_keeps_ticket_checkpoint_and_retry_does_not_duplicate_message(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
 
     class FailOnceAgent(HandoffAgent):
         attempts = 0
@@ -177,7 +168,7 @@ def test_model_failure_keeps_ticket_checkpoint_and_retry_does_not_duplicate_mess
 
 def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     agent = HandoffAgent()
     message = HumanMessage(content="请取消我的预订。", id="customer-1")
 
@@ -194,14 +185,13 @@ def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path)
     async def fail_initial_write():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store,
-                agents=AgentSet(escalation=agent),
+                checkpointer=checkpointer,
+                escalation_agent=agent,
             )
             try:
-                await aenter_ticket(
+                await run_ticket(TicketManager(store),
                     "external-1", message, user_id="user-1", user_name="One",
-                    workflow=FailingCheckpointUpdate(graph), ticket_event_store=store,
-                    ticket_id="ticket-1", new_ticket=True,
+                    workflow=FailingCheckpointUpdate(graph), ticket_id="ticket-1", new_ticket=True,
                 )
             except OSError as error:
                 assert "checkpoint write failed" in str(error)
@@ -220,7 +210,7 @@ def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path)
     assert result["ticket"]["status"] == "handed_off"
     assert store.status("ticket-1") == "completed"
     assert [item.id for item in result["messages"]].count("customer-1") == 1
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     event_types = [event["event_type"] for event in events]
     assert store.get_ticket("ticket-1").user_id == "user-1"
     assert event_types.count("ticket.created") == 1
@@ -232,7 +222,7 @@ def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path)
 
 def test_checkpoint_saved_before_initialization_marker_recovers_idempotently(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     agent = HandoffAgent()
     message = HumanMessage(content="请取消我的预订。", id="customer-1")
     mark_initialized = store.mark_checkpoint_initialized
@@ -260,8 +250,8 @@ def test_checkpoint_saved_before_initialization_marker_recovers_idempotently(tmp
     async def read_persisted_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store,
-                agents=AgentSet(escalation=agent),
+                checkpointer=checkpointer,
+                escalation_agent=agent,
             )
             return await graph.aget_state({"configurable": {"thread_id": "user-1"}})
 
@@ -274,7 +264,7 @@ def test_checkpoint_saved_before_initialization_marker_recovers_idempotently(tmp
         database, store, agent, ticket_id="ticket-1", message=message, new_ticket=False,
     ))
 
-    events = store.events(user_id="user-1", ticket_id="ticket-1")
+    events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
     event_types = [event["event_type"] for event in events]
     assert store.get_ticket("ticket-1").user_id == "user-1"
     assert event_types.count("ticket.created") == 1
@@ -289,7 +279,7 @@ def test_checkpoint_saved_before_initialization_marker_recovers_idempotently(tmp
 
 def test_initialized_ticket_without_checkpoint_reports_recovery_error(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     store.create_ticket(
         ticket_id="ticket-1", user_id="user-1", status="running",
         initial_message=HumanMessage(content="already started", id="customer-1").model_dump(),
@@ -300,14 +290,13 @@ def test_initialized_ticket_without_checkpoint_reports_recovery_error(tmp_path):
     async def enter_without_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store,
-                agents=AgentSet(escalation=agent),
+                checkpointer=checkpointer,
+                escalation_agent=agent,
             )
             with pytest.raises(TicketPersistenceError, match="checkpoint marked initialized but missing"):
-                await aenter_ticket(
+                await run_ticket(TicketManager(store),
                     "external-1", HumanMessage(content="new input", id="customer-2"),
-                    user_id="user-1", workflow=graph, ticket_event_store=store,
-                )
+                    user_id="user-1", workflow=graph,     )
 
     asyncio.run(enter_without_checkpoint())
     assert store.get_ticket("ticket-1").status == "running"
@@ -316,7 +305,7 @@ def test_initialized_ticket_without_checkpoint_reports_recovery_error(tmp_path):
 
 def test_new_ticket_replaces_previous_users_messages_in_checkpoint(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
     agent = HandoffAgent()
     first = asyncio.run(_enter(
         database, store, agent, ticket_id="ticket-1",
@@ -339,7 +328,7 @@ def test_new_ticket_replaces_previous_users_messages_in_checkpoint(tmp_path):
 
 def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
 
     async def await_reply(state):
         status = "completed" if state["ticket"]["input"] == "done" else "waiting_reply"
@@ -357,18 +346,14 @@ def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_p
 
     async def converse():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
-            from agentic.orchestration.workflow import aenter_ticket
-
             graph = builder.compile(checkpointer=checkpointer)
-            first = await aenter_ticket(
+            first = await run_ticket(TicketManager(store),
                 "external-1", HumanMessage(content="start", id="customer-1"),
-                user_id="user-1", workflow=graph, ticket_event_store=store,
-                new_ticket=True,
+                user_id="user-1", workflow=graph,     new_ticket=True,
             )
-            continued = await aenter_ticket(
+            continued = await run_ticket(TicketManager(store),
                 "external-1", HumanMessage(content="done", id="customer-2"),
-                user_id="user-1", workflow=graph, ticket_event_store=store,
-            )
+                user_id="user-1", workflow=graph)
             return first, continued
 
     first, continued = asyncio.run(converse())
@@ -379,7 +364,7 @@ def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_p
     assert [message.id for message in continued["messages"]] == ["customer-1", "customer-2"]
     assert store.status(first["ticket"]["ticket_id"]) == "completed"
     terminal_events = [
-        event for event in store.events(user_id="user-1", ticket_id=first["ticket"]["ticket_id"])
+        event for event in store.event_store.events(user_id="user-1", ticket_id=first["ticket"]["ticket_id"])
         if event["event_type"] == "ticket.completed"
     ]
     assert len(terminal_events) == 1
@@ -388,7 +373,7 @@ def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_p
 
 def test_selected_pending_ticket_is_used_instead_of_completed_checkpoint(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
 
     async def await_reply(state):
         return {"ticket": {**state["ticket"], "status": "waiting_reply"}}
@@ -401,20 +386,18 @@ def test_selected_pending_ticket_is_used_instead_of_completed_checkpoint(tmp_pat
     async def continue_selected_pending_ticket():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = builder.compile(checkpointer=checkpointer)
-            await aenter_ticket(
+            await run_ticket(TicketManager(store),
                 "external-1", HumanMessage(content="start", id="customer-1"),
-                user_id="user-1", workflow=graph, ticket_event_store=store,
-                ticket_id="checkpoint-ticket", new_ticket=True,
+                user_id="user-1", workflow=graph,     ticket_id="checkpoint-ticket", new_ticket=True,
             )
             store.commit_completed("checkpoint-ticket", final_message="done")
             store.create_ticket(
                 ticket_id="pending-ticket", user_id="user-1", status="pending",
                 initial_message=HumanMessage(content="pending start", id="pending-1").model_dump(),
             )
-            return await aenter_ticket(
+            return await run_ticket(TicketManager(store),
                 "external-1", HumanMessage(content="new reply", id="customer-2"),
-                user_id="user-1", workflow=graph, ticket_event_store=store,
-                ticket_id="pending-ticket", new_ticket=False,
+                user_id="user-1", workflow=graph,     ticket_id="pending-ticket", new_ticket=False,
             )
 
     result = asyncio.run(continue_selected_pending_ticket())
@@ -426,7 +409,7 @@ def test_selected_pending_ticket_is_used_instead_of_completed_checkpoint(tmp_pat
 
 def test_existing_checkpoint_takes_precedence_over_another_pending_ticket(tmp_path):
     database = tmp_path / "agent.sqlite"
-    store = TicketEventStore(database)
+    store = TicketStore(database)
 
     async def await_reply(state):
         if state["ticket"]["input"] == "done":
@@ -444,19 +427,17 @@ def test_existing_checkpoint_takes_precedence_over_another_pending_ticket(tmp_pa
     async def continue_current_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
             graph = builder.compile(checkpointer=checkpointer)
-            await aenter_ticket(
+            await run_ticket(TicketManager(store),
                 "external-1", HumanMessage(content="start", id="customer-1"),
-                user_id="user-1", workflow=graph, ticket_event_store=store,
-                ticket_id="ticket-current", new_ticket=True,
+                user_id="user-1", workflow=graph,     ticket_id="ticket-current", new_ticket=True,
             )
             store.create_ticket(
                 ticket_id="ticket-pending", user_id="user-1", status="pending",
                 initial_message=HumanMessage(content="other request", id="other-1").model_dump(),
             )
-            return await aenter_ticket(
+            return await run_ticket(TicketManager(store),
                 "external-1", HumanMessage(content="done", id="customer-2"),
-                user_id="user-1", workflow=graph, ticket_event_store=store,
-                new_ticket=False,
+                user_id="user-1", workflow=graph,     new_ticket=False,
             )
 
     result = asyncio.run(continue_current_checkpoint())

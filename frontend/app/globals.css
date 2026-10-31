@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light;
+  --ink: #172033;
+  --muted: #8390a4;
+  --blue: #2563eb;
+  --blue-dark: #1749bd;
+  --line: #e7ebf2;
+  --canvas: #f4f6fa;
+  --assistant: #f0f1f5;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body {
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: "Noto Sans SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid #93b4ff;
+  outline-offset: 3px;
+}
+::selection { color: #fff; background: #2563eb; }

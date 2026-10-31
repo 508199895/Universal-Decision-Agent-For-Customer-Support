@@ -2,7 +2,7 @@
 
 本目录保留上游 `mcp-server-qdrant` 的运行代码及 Apache-2.0 许可证；测试、开发命令和容器构建文件不随服务部署。
 
-项目通过 `agentic/tools/mcp_client.py` 以 stdio 启动 `server.py`。服务连接现有 Qdrant 数据库，使用项目评估过的 Dense + BM25 + RRF，并通过 `BAAI/bge-reranker-base` 对结果重排。
+项目通过 `agentic/capabilities/mcp/client.py` 以 stdio 启动 `server.py`。服务连接现有 Qdrant 数据库，使用项目评估过的 Dense + BM25 + RRF，并通过 `BAAI/bge-reranker-base` 对结果重排。
 
 在项目根目录 `.env` 配置：
 

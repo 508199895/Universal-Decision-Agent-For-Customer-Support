@@ -10,6 +10,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from dotenv import load_dotenv
 
 load_dotenv(PROJECT_ROOT / ".env")
+# Keep the model from guessing a collection when deployments omit this setting.
+os.environ.setdefault("COLLECTION_NAME", "uda-hub-retrieval-eval")
 os.environ.setdefault(
     "FASTEMBED_CACHE_PATH",
     str(PROJECT_ROOT / "mcp_services" / "qdrant" / ".cache" / "fastembed"),

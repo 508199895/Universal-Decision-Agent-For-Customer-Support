@@ -4,10 +4,9 @@ from pathlib import Path
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-from agentic.agents.agent import AgentSet
 from scripts.migrate_ticket_database import migrate_legacy_database
-from agentic.data.tickets.ticket_store import TicketEventStore
-from agentic.orchestration.workflow import build_workflow
+from agentic.data.tickets.TicketStore import TicketStore
+from agentic.orchestration.workflow.factory import build_workflow
 
 
 def _legacy_database(path):
@@ -89,28 +88,28 @@ def test_migration_preserves_history_and_seeds_latest_active_user_checkpoints(tm
     assert connection.execute("SELECT COUNT(*) FROM ticket_events").fetchone()[0] == 11
     connection.close()
 
-    store = TicketEventStore(target)
+    store = TicketStore(target)
     assert store.status("a-active") == "running"
     assert store.status("a-newer-completed") == "completed"
     assert store.status("b-old-active") == "completed"
     assert store.status("b-latest-active") == "running"
     old_ticket_created = next(
-        event for event in store.events(user_id="user-b", ticket_id="b-old-active")
+        event for event in store.event_store.events(user_id="user-b", ticket_id="b-old-active")
         if event["event_type"] == "ticket.created"
     )
     assert old_ticket_created["metadata"]["legacy_status"] == "open"
     assert old_ticket_created["metadata"]["account_id"] == "acct-b"
     assert [
         event["content"]["id"]
-        for event in store.events(user_id="user-a", ticket_id="a-active")
+        for event in store.event_store.events(user_id="user-a", ticket_id="a-active")
         if event["event_type"] == "ticket.history.message"
     ] == ["a-m1", "a-m2"]
 
     async def read_checkpoints():
         async with AsyncSqliteSaver.from_conn_string(str(target)) as checkpointer:
             graph = build_workflow(
-                checkpointer=checkpointer, ticket_event_store=store,
-                agents=AgentSet(escalation=object()),
+                checkpointer=checkpointer,
+                escalation_agent=object(),
             )
             states = {}
             for user_id in ("user-a", "user-b"):

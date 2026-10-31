@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from deepeval.test_case import LLMTestCase
 
-from evals.retrieval.evaluate_qdrant_retrieval import (
+from agentic.evals.retrieval.evaluate_qdrant_retrieval import (
     GoldenQuery,
     HitAtKMetric,
     MRRAtKMetric,

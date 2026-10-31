@@ -7,56 +7,39 @@ import pytest
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-from agentic.agents.agent import AgentSet
 from agentic.app import cli
-from agentic.capabilities.support_toolset import SupportToolConfigurationError
-from agentic.orchestration import workflow
+from agentic.capabilities.tools.support_toolset import SupportToolConfigurationError
+from agentic.lifespan import runtime as workflow_runtime
 
 
 def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypatch):
     checkpointers = []
-    agent_builds = []
-    workflow_agents = []
+    workflow_initializations = []
     graph = object()
-    agents = AgentSet(
-        query=object(), escalation=object(),
-        supervisor=object(), validate=object(),
-    )
-
     class MiddlewareModel:
         _llm_type = "fake-chat"
 
         def with_retry(self):
             return self
-    monkeypatch.setattr(
-        workflow,
-        "build_workflow",
-        lambda **kwargs: checkpointers.append(kwargs["checkpointer"])
-        or workflow_agents.append(kwargs.get("agents"))
-        or graph,
-    )
-    monkeypatch.setattr(workflow, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
-    monkeypatch.setattr(
-        workflow,
-        "_default_dependencies",
-        lambda: workflow.WorkflowDependencies(model=MiddlewareModel()),
-    )
-    monkeypatch.setattr(workflow, "acollect_support_tools", lambda: _resolved(("tool",)))
-    monkeypatch.setattr(
-        workflow,
-        "build_agent_set",
-        lambda **kwargs: agent_builds.append(kwargs) or agents,
-    )
+    monkeypatch.setattr(workflow_runtime, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
+    monkeypatch.setattr(workflow_runtime, "_default_model", MiddlewareModel)
+    monkeypatch.setattr(workflow_runtime, "acollect_support_tools", lambda: _resolved(("tool",)))
+    class FakeWorkflowManager:
+        def initialize(self, **kwargs):
+            checkpointers.append(kwargs["checkpointer"])
+            workflow_initializations.append(kwargs)
+            return graph
+
+    monkeypatch.setattr(workflow_runtime, "WorkflowManager", FakeWorkflowManager)
 
     async def exercise_runtime():
-        async with workflow.default_workflow_runtime() as (opened_graph, event_store):
+        async with workflow_runtime.default_workflow_runtime() as (opened_graph, ticket_manager):
             assert opened_graph is graph
-            assert event_store.database == str(tmp_path / "agent.sqlite")
+            assert ticket_manager.ticket_store.database == str(tmp_path / "agent.sqlite")
             assert len(checkpointers) == 1
             assert isinstance(checkpointers[0], AsyncSqliteSaver)
-            assert len(agent_builds) == 1
-            assert agent_builds[0]["tools"] == ("tool",)
-            assert workflow_agents == [agents]
+            assert len(workflow_initializations) == 1
+            assert workflow_initializations[0]["tools"] == ["tool"]
 
     asyncio.run(exercise_runtime())
 
@@ -73,12 +56,8 @@ def test_support_tool_configuration_failure_stops_before_workflow_startup(tmp_pa
             self.closed = True
 
     client = Client()
-    monkeypatch.setattr(workflow, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
-    monkeypatch.setattr(
-        workflow,
-        "_default_dependencies",
-        lambda: workflow.WorkflowDependencies(model=SimpleNamespace(root_client=client)),
-    )
+    monkeypatch.setattr(workflow_runtime, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
+    monkeypatch.setattr(workflow_runtime, "_default_model", lambda: SimpleNamespace(root_client=client))
 
     async def fail_collection():
         raise SupportToolConfigurationError("required support tool is missing")
@@ -86,12 +65,12 @@ def test_support_tool_configuration_failure_stops_before_workflow_startup(tmp_pa
     async def should_not_start_workflow(*_args, **_kwargs):
         raise AssertionError("workflow startup must follow successful tool collection")
 
-    monkeypatch.setattr(workflow, "acollect_support_tools", fail_collection)
-    monkeypatch.setattr(workflow, "persistent_workflow", should_not_start_workflow)
+    monkeypatch.setattr(workflow_runtime, "acollect_support_tools", fail_collection)
+    monkeypatch.setattr(workflow_runtime, "WorkflowManager", should_not_start_workflow)
 
     async def exercise_runtime():
         with pytest.raises(SupportToolConfigurationError, match="missing"):
-            async with workflow.default_workflow_runtime():
+            async with workflow_runtime.default_workflow_runtime():
                 pytest.fail("customer input must not be accepted after configuration failure")
 
     asyncio.run(exercise_runtime())

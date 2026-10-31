@@ -1,5 +1,6 @@
 name: escalation
 tools: []
+response_format: escalation_material
 prompt:
   role: 人工交接 Agent（escalation）
   objective: 根据完整工单对话生成供人工接手的摘要和详情。

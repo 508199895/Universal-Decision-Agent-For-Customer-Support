@@ -6,13 +6,13 @@ from agentic.app.cli import (
     _continuation_ticket_id,
     _should_start_new_ticket,
 )
-from agentic.data.tickets.ticket_store import TicketEventStore
-from agentic.orchestration.handoff import HANDOFF_NOTICE
-from agentic.orchestration.workflow import customer_message_for_state
+from agentic.data.tickets.TicketStore import TicketStore
+from agentic.agents.escalation.handoff import HANDOFF_NOTICE
+from agentic.orchestration.orchestration import customer_message_for_state
 
 
 def test_cli_selects_only_unfinished_ticket_candidates(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     assert _continuation_ticket_id(store, "user-1") is None
 
     store.create_ticket(
@@ -29,7 +29,7 @@ def test_cli_selects_only_unfinished_ticket_candidates(tmp_path):
 
 
 def test_cli_uses_the_latest_checkpoint_ticket_not_an_older_open_ticket(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="older", user_id="user-1", status="running")
     store.mark_checkpoint_initialized("older")
     store.create_ticket(ticket_id="latest", user_id="user-1", status="running")
@@ -41,7 +41,7 @@ def test_cli_uses_the_latest_checkpoint_ticket_not_an_older_open_ticket(tmp_path
 
 
 def test_cli_falls_back_to_pending_when_latest_checkpoint_ticket_is_completed(tmp_path):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(ticket_id="checkpoint", user_id="user-1", status="running")
     store.mark_checkpoint_initialized("checkpoint")
     store.commit_completed("checkpoint", final_message="done")
@@ -51,7 +51,7 @@ def test_cli_falls_back_to_pending_when_latest_checkpoint_ticket_is_completed(tm
 
 
 def test_chat_starts_new_ticket_without_prompt_when_none_is_unfinished(tmp_path, monkeypatch):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
 
     def unexpected_prompt(_prompt):
         raise AssertionError("CLI should not ask when no unfinished ticket exists")
@@ -64,7 +64,7 @@ def test_chat_starts_new_ticket_without_prompt_when_none_is_unfinished(tmp_path,
 def test_chat_uses_the_fixed_prompt_to_choose_ticket_lifecycle(
     tmp_path, monkeypatch, answer, expected,
 ):
-    store = TicketEventStore(tmp_path / "agent.sqlite")
+    store = TicketStore(tmp_path / "agent.sqlite")
     store.create_ticket(
         ticket_id="ticket-1", user_id="user-1", initial_message={"content": "start", "id": "m1"},
     )
@@ -98,7 +98,13 @@ def test_cli_projects_only_the_active_customer_message():
     assert customer_message_for_state({
         "ticket": {"status": "completed"},
         "query": {"answer": "已验证答案。", "validated": True},
-    }) == "已验证答案。"
+        "supervisor": {"message": None},
+    }) is None
+    assert customer_message_for_state({
+        "ticket": {"status": "completed"},
+        "query": {"answer": "已验证答案。", "validated": True},
+        "supervisor": {"message": "supervisor 组织后的答案。"},
+    }) == "supervisor 组织后的答案。"
     assert customer_message_for_state({
         "ticket": {"status": "completed"},
         "query": {"answer": "未校核内容。", "validated": False},

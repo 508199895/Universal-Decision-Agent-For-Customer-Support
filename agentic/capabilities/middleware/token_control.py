@@ -19,7 +19,10 @@ class TicketTokenLimitExceeded(RuntimeError):
 
 @dataclass(frozen=True)
 class TicketRuntimeContext:
-    journal: Any
+    """Run-scoped data shared by graph nodes and middleware."""
+    journal: Any | None = None
+    external_user_id: str | None = None
+    ticket_id: str | None = None
 
 
 class TicketTokenBudgetMiddleware(AgentMiddleware):
@@ -43,9 +46,9 @@ class TicketTokenBudgetMiddleware(AgentMiddleware):
         journal = getattr(context, "journal", None)
         if journal is None:
             raise RuntimeError("ticket token middleware requires a per-run Journal")
-        if journal.total_tokens >= journal.token_limit:
+        if journal.total_tokens >= TICKET_TOKEN_LIMIT:
             raise TicketTokenLimitExceeded(
-                f"工单累计 Token 已达到上限 {journal.token_limit}，已停止自动回答。"
+                f"工单累计 Token 已达到上限 {TICKET_TOKEN_LIMIT}，已停止自动回答。"
             )
 
 

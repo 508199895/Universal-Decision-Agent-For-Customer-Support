@@ -65,7 +65,7 @@ Each agent writes into a shared LangGraph state, and the supervisor decides the 
 
 ### Architecture Diagram
 
-![Graph](https://github.com/shilpamadini/Universal-Decision-Agent-For-Customer-Support/blob/8765e484244cbeb24af5deb5dff2d88e7cbcf8fd/agentic/design/Graph.jpeg)
+![Graph](https://github.com/shilpamadini/Universal-Decision-Agent-For-Customer-Support/blob/8765e484244cbeb24af5deb5dff2d88e7cbcf8fd/docs/design/Graph.jpeg)
 
 
 ### State Management
@@ -213,19 +213,14 @@ uda-hub/
 │  ├─ agents/                       # L4: current single Agent and agent modules
 │  ├─ capabilities/tools/           # L3: Agent-facing tools
 │  ├─ data/tickets/                 # L2: ticket persistence and event records
-│  ├─ integrations/mcp/              # L2: MCP client
-│  └─ design/                       # Fixed location for architecture, Specs, and ticket design
+│  ├─ capabilities/mcp/             # L2: MCP client
+│  └─ evals/                        # Evaluation scripts, datasets, and results
 ├─ mcp_services/                    # MCP service implementations
-├─ evals/
-│  ├─ deepeval/                     # DeepEval notes and single-Agent evaluations
-│  ├─ retrieval/                    # Retrieval evaluation and Golden generation
-│  ├─ datasets/
-│  └─ results/
 ├─ tests/
 ├─ notebooks/                       # Database setup notebooks and notebook helpers
 ├─ scripts/                         # Migration, development, and diagram utilities
 ├─ data/                            # Existing database models, source data, and local databases
-├─ docs/                            # Agent rules and research; existing paths retained
+├─ docs/                            # Agent rules, design, and research
 ├─ .scratch/<feature>/              # Fixed location for generated Specs and task tickets
 ├─ CONTEXT.md
 ├─ AGENTS.md
@@ -233,7 +228,7 @@ uda-hub/
 └─ README.md
 ```
 
-Existing support-workflow Specs and architecture documents remain in `agentic/design/`. New feature Specs and task tickets follow `docs/agents/issue-tracker.md` and remain under `.scratch/<feature>/`.
+Existing support-workflow Specs and architecture documents remain in `docs/design/`. New feature Specs and task tickets follow `docs/agents/issue-tracker.md` and remain under `.scratch/<feature>/`.
 ## Setup Instructions
 1. Use the project-local environment. The checked-out `.venv` already contains the cloned environment. If it is missing, create it and install dependencies:
 
@@ -285,6 +280,23 @@ Run interactive mode:
 .\.venv\python.exe -m agentic.app.cli --mode chat
 
 ```
+
+Run the FastAPI customer-support API and Feishu bridge:
+
+```
+.\.venv\python.exe -m uvicorn agentic.app.fastapi_server:app --host 127.0.0.1 --port 8000
+```
+
+Submit a customer message to `POST /tickets` with only the database `user_id` and message text. The API reads `external_user_id` and `user_name` from `data/core/udahub.db`, then returns `202 Accepted` with the new ticket ID and `pending` status. The local MCP subprocesses start with the application; the Qdrant Docker service must already be available.
+
+```json
+{
+  "user_id": "<existing user ID from the users table>",
+  "message": "我想查询我的账户状态"
+}
+```
+
+The service requires `DEEPSEEK_API_KEY` and the existing Feishu settings (`LARK_APP_ID`, `LARK_APP_SECRET`, `FEISHU_CHAT_ID`). `UDAHUB_DB_PATH` can override the default user database path.
 
 ## Running Tests
 
