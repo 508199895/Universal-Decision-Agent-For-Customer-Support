@@ -183,7 +183,6 @@ async def interactive_chat_loop(
         )
 
         print("\n--- Result ---")
-        print(f"Ticket status: {final_state.get('ticket', {}).get('status')}")
         messages = final_state.get("messages") or []
         if messages:
             message = messages[-1]

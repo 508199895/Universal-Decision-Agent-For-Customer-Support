@@ -15,7 +15,6 @@ class StateContractError(ValueError):
 
 GROUP_DEFAULTS: dict[str, dict[str, Any]] = {
     "ticket": {
-        "status": "processing",
         "input": "",
         "owner_id": None,
         "owner_name": None,
@@ -48,7 +47,6 @@ GROUP_DEFAULTS: dict[str, dict[str, Any]] = {
 }
 
 ENUMS = {
-    ("ticket", "status"): {"processing", "waiting_reply", "completed", "handed_off"},
     ("supervisor", "intent"): {"query", "account", "escalation", "unknown"},
     ("supervisor", "next_node"): {"query", "account", "clarify", "escalation", "finish", None},
     ("query", "next_node"): {"validate", "supervisor", None},
@@ -157,9 +155,9 @@ def validate_state(state: Any) -> None:
             _validate_field(group, field, item)
     if state["account"]["status"] != "pending" and not state["account"]["description"]:
         raise StateContractError("account.description is required when account.status is not pending")
-    if state["ticket"]["status"] == "handed_off":
+    if state["supervisor"]["intent"] == "escalation":
         if not state["escalation"]["description"] or not state["escalation"]["summary"]:
-            raise StateContractError("handed_off ticket requires complete escalation material")
+            raise StateContractError("escalation intent requires complete escalation material")
 
 
 def _validate_field(group: str, field: str, value: Any) -> None:

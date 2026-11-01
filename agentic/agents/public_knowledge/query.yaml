@@ -1,7 +1,6 @@
 name: query
 tools:
   - qdrant_qdrant-find
-response_format: null
 prompt:
   role: 公共知识查询 Agent（query）
   objective: 根据 supervisor 分派的公共知识查询任务，取得可信材料并形成有依据的答复。

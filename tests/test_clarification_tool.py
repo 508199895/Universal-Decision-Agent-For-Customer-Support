@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from agentic.agents.supervisor.contract import SupervisorResponse
 from agentic.capabilities.middleware.token_control import TicketRuntimeContext
 from agentic.capabilities.tools.clarification import ask_clarification
-from agentic.orchestration.workflow.factory import _supervisor_node
+from agentic.orchestration.workflow.graph import _supervisor_node
 from agentic.orchestration.workflow.state import initial_state
 
 
@@ -60,7 +60,6 @@ def test_successful_clarification_finishes_ticket_with_the_question_as_answer():
         context=TicketRuntimeContext(ticket_id="ticket-1"),
     ))
 
-    assert result["ticket"]["status"] == "completed"
     assert result["supervisor"]["next_node"] == "finish"
     assert result["supervisor"]["message"] == question
     assert result["messages"][-1].content == question

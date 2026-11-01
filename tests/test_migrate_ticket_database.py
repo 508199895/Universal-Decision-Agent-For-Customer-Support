@@ -6,7 +6,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from scripts.migrate_ticket_database import migrate_legacy_database
 from agentic.data.tickets.TicketStore import TicketStore
-from agentic.orchestration.workflow.factory import build_workflow
+from agentic.orchestration.workflow.graph import build_workflow
 
 
 def _legacy_database(path):

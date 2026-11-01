@@ -6,13 +6,13 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 
 from agentic.data.tickets.TicketStore import TicketStore
-from agentic.agents.escalation.handoff import HANDOFF_NOTICE
-from agentic.orchestration.workflow.factory import (
+from agentic.orchestration.workflow.handoff import HANDOFF_NOTICE
+from agentic.orchestration.workflow.graph import (
     ValidateResult,
     SupervisorIntentResult,
     build_workflow,
 )
-from agentic.agents.agent_wrappers import _public_evidence
+from agentic.agents.public_knowledge.graph import extract_public_evidence as _public_evidence
 from agentic.orchestration.ticket.manager import TicketManager
 from agentic.orchestration.orchestration import customer_message_for_state, run_ticket
 from agentic.orchestration.workflow.state import WorkflowState
@@ -94,7 +94,6 @@ def test_public_answer_is_committed_only_after_all_three_checks_pass(tmp_path):
     state, store = _run(tmp_path, model, draft="已核实的退订规则。")
 
     assert model.schemas == [SupervisorIntentResult, ValidateResult]
-    assert state["ticket"]["status"] == "completed"
     assert state["query"]["validated"] is True
     assert state["supervisor"]["message"] == "已核实的退订规则。"
     assert customer_message_for_state(state) == "已核实的退订规则。"
@@ -115,7 +114,7 @@ def test_public_answer_that_fails_review_is_handed_off_without_leaking_candidate
 
     state, store = _run(tmp_path, model, draft="未经证实的退订承诺。")
 
-    assert state["ticket"]["status"] == "handed_off"
+    assert state["supervisor"]["intent"] == "escalation"
     assert state["query"]["validated"] is False
     assert customer_message_for_state(state) == HANDOFF_NOTICE
     assert "未经证实的退订承诺" not in customer_message_for_state(state)
@@ -131,7 +130,7 @@ def test_invalid_review_structure_hands_off(tmp_path):
     state, _store = _run(tmp_path, model)
 
     assert model.schemas == [SupervisorIntentResult, ValidateResult]
-    assert state["ticket"]["status"] == "handed_off"
+    assert state["supervisor"]["intent"] == "escalation"
     assert state["validate"]["context_relevance"] is None
     assert state["query"]["validated"] is None
     assert customer_message_for_state(state) == HANDOFF_NOTICE
@@ -143,7 +142,6 @@ def test_account_action_intent_bypasses_public_answer_generation(tmp_path):
     state, _store = _run(tmp_path, model, question="请取消我的预订")
 
     assert model.schemas == [SupervisorIntentResult]
-    assert state["ticket"]["status"] == "handed_off"
     assert state["supervisor"]["intent"] == "escalation"
     assert customer_message_for_state(state) == HANDOFF_NOTICE
 
@@ -179,7 +177,6 @@ def test_account_profile_query_returns_source_backed_tool_evidence(tmp_path):
         draft="账户资料显示姓名为 One。",
     )
 
-    assert state["ticket"]["status"] == "completed"
     assert [item["source_ref"] for item in state["query"]["evidence"]] == [
         "account_get_user", "account_get_user_reservations",
     ]
@@ -202,7 +199,7 @@ def test_account_query_failure_and_unknown_user_do_not_claim_success(tmp_path):
         question="我的预约状态是什么？",
         draft="无法从账户服务核实预约状态。",
     )
-    assert failed["ticket"]["status"] == "handed_off"
+    assert failed["supervisor"]["intent"] == "escalation"
     assert customer_message_for_state(failed) == HANDOFF_NOTICE
 
     unknown, _ = _run(
@@ -213,7 +210,7 @@ def test_account_query_failure_and_unknown_user_do_not_claim_success(tmp_path):
             "account_account_get_user", {"external_user": None, "core_user": None}, "unknown",
         )],
     )
-    assert unknown["ticket"]["status"] == "handed_off"
+    assert unknown["supervisor"]["intent"] == "escalation"
     assert customer_message_for_state(unknown) == HANDOFF_NOTICE
 
 
@@ -228,7 +225,7 @@ def test_account_query_rejects_reservation_rows_for_another_user(tmp_path):
             ], "foreign-reservation",
         )],
     )
-    assert state["ticket"]["status"] == "handed_off"
+    assert state["supervisor"]["intent"] == "escalation"
     assert "secret" not in customer_message_for_state(state)
 
 
@@ -251,7 +248,7 @@ def test_account_query_with_missing_requested_field_keeps_the_gap(tmp_path):
         )],
         draft="账户资料未返回邮箱，尚不能核实。",
     )
-    assert state["ticket"]["status"] == "handed_off"
+    assert state["supervisor"]["intent"] == "escalation"
     assert customer_message_for_state(state) == HANDOFF_NOTICE
 
 
@@ -269,7 +266,7 @@ def test_account_status_query_does_not_substitute_reservation_data(tmp_path):
         draft="当前工具没有订阅状态资料，暂时无法核实。",
     )
 
-    assert state["ticket"]["status"] == "handed_off"
+    assert state["supervisor"]["intent"] == "escalation"
     assert state["query"]["evidence"] == []
     assert customer_message_for_state(state) == HANDOFF_NOTICE
 

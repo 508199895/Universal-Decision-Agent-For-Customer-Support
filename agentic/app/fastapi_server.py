@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from data.models.udahub import User as CoreUser
 from agentic.capabilities.feishu import create_feishu_channel, send_feishu_text
+from agentic.config import load_app_config
 from agentic.lifespan.runtime import default_workflow_runtime
 from agentic.orchestration.orchestration import start_ticket
 from agentic.orchestration.ticket.manager import ConflictError
@@ -61,6 +62,7 @@ async def lifespan(app: FastAPI):
         app.state.websocket_clients = set()
         app.state.workflow_ready = False
         app.state.ticket_tasks = set()
+        app.state.app_config = load_app_config()
 
         async def forward_feishu_message(message) -> None:
             if message.chat_id != chat_id:
@@ -108,7 +110,10 @@ async def lifespan(app: FastAPI):
                 return await send_feishu_text(channel, chat_id, text)
 
             runtime = await stack.enter_async_context(
-                default_workflow_runtime(handoff_sender=send_handoff)
+                default_workflow_runtime(
+                    handoff_sender=send_handoff,
+                    app_config=app.state.app_config,
+                )
             )
             workflow, ticket_manager, ticket_store, ticket_event_store = runtime
 

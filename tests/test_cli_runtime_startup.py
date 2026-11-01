@@ -22,8 +22,8 @@ def test_default_runtime_opens_checkpointer_for_async_session(tmp_path, monkeypa
         def with_retry(self):
             return self
     monkeypatch.setattr(workflow_runtime, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
-    monkeypatch.setattr(workflow_runtime, "_default_model", MiddlewareModel)
-    monkeypatch.setattr(workflow_runtime, "acollect_support_tools", lambda: _resolved(("tool",)))
+    monkeypatch.setattr(workflow_runtime, "_default_model", lambda _config=None: MiddlewareModel())
+    monkeypatch.setattr(workflow_runtime, "acollect_support_tools", lambda _names=None: _resolved(("tool",)))
     class FakeWorkflowManager:
         def initialize(self, **kwargs):
             checkpointers.append(kwargs["checkpointer"])
@@ -57,9 +57,9 @@ def test_support_tool_configuration_failure_stops_before_workflow_startup(tmp_pa
 
     client = Client()
     monkeypatch.setattr(workflow_runtime, "_default_agent_database", lambda: tmp_path / "agent.sqlite")
-    monkeypatch.setattr(workflow_runtime, "_default_model", lambda: SimpleNamespace(root_client=client))
+    monkeypatch.setattr(workflow_runtime, "_default_model", lambda _config=None: SimpleNamespace(root_client=client))
 
-    async def fail_collection():
+    async def fail_collection(_names=None):
         raise SupportToolConfigurationError("required support tool is missing")
 
     async def should_not_start_workflow(*_args, **_kwargs):

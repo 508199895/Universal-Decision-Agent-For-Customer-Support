@@ -66,8 +66,7 @@ def test_agent_tool_allowlists_are_limited_by_role(monkeypatch):
     expected_tools = {
         "supervisor": {
             "ask_clarification",
-            "query_public_knowledge",
-            "lookup_current_user_account",
+            "request_human_handoff",
         },
         "query": {
             "qdrant_qdrant-find",
@@ -77,7 +76,6 @@ def test_agent_tool_allowlists_are_limited_by_role(monkeypatch):
             "account_account_get_user",
             "account_account_get_user_reservations",
         },
-        "escalation": set(),
     }
 
     for name in AGENT_NAMES:

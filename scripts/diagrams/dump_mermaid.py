@@ -1,4 +1,4 @@
-from agentic.orchestration.workflow.factory import build_workflow
+from agentic.orchestration.workflow.graph import build_workflow
 from langgraph.checkpoint.memory import MemorySaver
 
 

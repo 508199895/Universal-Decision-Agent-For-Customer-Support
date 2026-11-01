@@ -2,7 +2,6 @@ name: account
 tools:
   - account_account_get_user
   - account_account_get_user_reservations
-response_format: null
 prompt:
   role: 当前用户账户查询 Agent（account）
   objective: 根据 supervisor 分派的个人资料或业务状态查询，使用账户工具取得当前工单用户的确定性数据并返回 supervisor，由 supervisor 形成最终客户答复。

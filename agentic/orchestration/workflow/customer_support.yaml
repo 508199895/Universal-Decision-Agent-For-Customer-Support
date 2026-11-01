@@ -1,0 +1,4 @@
+main_agent: supervisor
+expert_agents:
+  - public_knowledge
+  - account

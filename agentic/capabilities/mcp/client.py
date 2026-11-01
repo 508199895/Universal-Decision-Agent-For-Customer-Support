@@ -27,15 +27,14 @@ _SERVER_TOOL_PREFIXES = {
 }
 
 
-def _build_connections_config() -> Dict[str, Any]:
+def _build_connections_config(*servers: str) -> Dict[str, Any]:
     """
     Build a canonical multi-server MCP configuration for MCPAdapter.
 
     We use stdio transport and launch each FastMCP server as a subprocess
     with the current Python interpreter. The bundled Qdrant server uses stdio.
     """
-    return {
-        "mcpServers": {
+    server_configs = {
             "kb": {
                 "transport": "stdio",
                 "command": sys.executable,
@@ -56,6 +55,14 @@ def _build_connections_config() -> Dict[str, Any]:
                 "command": sys.executable,
                 "args": [str(PROJECT_ROOT / "mcp_services" / "qdrant" / "server.py")],
             },
+    }
+    selected_servers = servers or tuple(server_configs)
+    unknown = sorted(set(selected_servers) - server_configs.keys())
+    if unknown:
+        raise ValueError("Unknown MCP servers: " + ", ".join(unknown))
+    return {
+        "mcpServers": {
+            name: server_configs[name] for name in selected_servers
         }
     }
 
@@ -67,8 +74,11 @@ async def aget_client() -> MCPAdapter:
     Safe to use inside Jupyter and async code.
     """
     global _client, _client_config, _tools_cache
-    config = _build_connections_config()
-    if _client is None or config != _client_config:
+    # A runtime lifespan may have opened only the servers selected by app config.
+    # Reuse that client; replacing it with the default all-server client here would
+    # discard the selected-server boundary and bypass the managed lifespan.
+    if _client is None:
+        config = _build_connections_config()
         _client = MCPAdapter(config)
         _client_config = config
         _tools_cache = None
@@ -84,10 +94,10 @@ def clear_client() -> None:
 
 
 @asynccontextmanager
-async def mcp_client_lifespan():
-    """Keep local MCP subprocesses connected for the workflow runtime lifetime."""
+async def mcp_client_lifespan(*servers: str):
+    """Keep selected local MCP subprocesses connected for the runtime lifetime."""
     global _client, _client_config, _tools_cache
-    config = _build_connections_config()
+    config = _build_connections_config(*servers)
     client = MCPAdapter(config)
     async with client:
         _client = client

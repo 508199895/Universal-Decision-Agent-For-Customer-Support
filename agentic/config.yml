@@ -1,0 +1,28 @@
+models:
+  default: support
+  enabled:
+    support:
+      provider: deepseek
+      api_mode: responses
+      model: deepseek-flash
+      model_env: DEEPSEEK_MODEL
+      api_key_env: DEEPSEEK_API_KEY
+      base_url_env: DEEPSEEK_BASE_URL
+      base_url: https://api.deepseek.com
+      temperature: 0
+      temperature_env: DEEPSEEK_TEMPERATURE
+      max_tokens: 8192
+      max_tokens_env: DEEPSEEK_MAX_TOKENS
+      reasoning_effort: none
+
+tools:
+  enabled:
+    - qdrant_qdrant-find
+    - account_account_get_user
+    - account_account_get_user_reservations
+    - ask_clarification
+    - request_human_handoff
+
+workflow:
+  directory: orchestration/workflow
+  name: customer_support

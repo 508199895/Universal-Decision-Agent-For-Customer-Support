@@ -18,13 +18,11 @@ def build_handoff_messages(
 ) -> tuple[SystemMessage, SystemMessage]:
     """Persist the two escalation fields and the fixed customer notice."""
     validate_state(state)
-    ticket = state.get("ticket")
-    if not isinstance(ticket, dict):
-        raise ValueError("handoff requires ticket state")
     if not isinstance(ticket_id, str) or not ticket_id.strip():
         raise ValueError("handoff requires a context ticket_id")
-    if ticket.get("status") != "handed_off":
-        raise ValueError("handoff requires ticket.status='handed_off'")
+    supervisor = state.get("supervisor", {})
+    if supervisor.get("intent") != "escalation":
+        raise ValueError("handoff requires supervisor.intent='escalation'")
     escalation = state.get("escalation", {})
     if not escalation.get("description") or not escalation.get("summary"):
         raise ValueError("handoff requires complete escalation description and summary")

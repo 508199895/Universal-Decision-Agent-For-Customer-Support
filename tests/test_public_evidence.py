@@ -2,7 +2,7 @@ import json
 
 from langchain_core.messages import ToolMessage
 
-from agentic.agents.agent_wrappers import _public_evidence
+from agentic.agents.public_knowledge.graph import extract_public_evidence as _public_evidence
 
 
 def test_qdrant_evidence_parses_json_encoded_result_list():

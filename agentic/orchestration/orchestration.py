@@ -184,6 +184,7 @@ async def run_workflow(
     checkpoint_capture_failed = False
     journal: TicketJournal | None = None
     workflow_completed = False
+    supervisor_reply: str | None = None
     user_context_token = set_current_user_id(user_id)
     try:
         ticket_id = run_record.ticket_id
@@ -199,9 +200,10 @@ async def run_workflow(
         snapshot = await workflow.aget_state(config)
         latest_state = dict(snapshot.values or {})
         latest_ticket = dict(latest_state.get("ticket") or {})
-        # Older checkpoints stored this identifier in State. Drop it while
-        # restoring so all subsequent checkpoints follow the context contract.
+        # Older checkpoints stored these values in State. Drop them while
+        # restoring so all subsequent checkpoints follow the current contract.
         latest_ticket.pop("ticket_id", None)
+        latest_ticket.pop("status", None)
         journal = TicketJournal(
             event_store=ticket_event_store,
             ticket_id=ticket_id,
@@ -240,7 +242,6 @@ async def run_workflow(
                 input=message.content,
                 owner_id=external_user_id,
                 owner_name=user_name,
-                status="processing",
             )
             state_update = {
                 **latest_state,
@@ -280,7 +281,6 @@ async def run_workflow(
                 runnable_config["tags"] = trace_config["tags"]
                 runnable_config["callbacks"].extend(trace_config["callbacks"])
 
-            supervisor_reply = None
             async for update in astream_workflow(
                 workflow, None, config=runnable_config, context=runtime_context,
             ):
@@ -305,9 +305,6 @@ async def run_workflow(
                 "message": supervisor_reply,
             }
 
-            workflow_status = result.get("ticket", {}).get("status")
-            if workflow_status not in {"completed", "handed_off", "waiting_reply"}:
-                raise RuntimeError("workflow returned an unsupported ticket state")
             workflow_completed = True
             return result
         except asyncio.CancelledError:
@@ -350,10 +347,13 @@ async def run_workflow(
                         "Failed to flush journal for ticket %s", ticket_id, exc_info=True,
                     )
                 try:
+                    completion_data = journal.get_completion_data()
+                    if workflow_completed and supervisor_reply:
+                        completion_data["last_ai_message"] = supervisor_reply
                     await manager.update_run_completion(
                         ticket_id,
                         status=run_record.status.value,
-                        **journal.get_completion_data(),
+                        **completion_data,
                     )
                 except Exception:
                     logger.warning(

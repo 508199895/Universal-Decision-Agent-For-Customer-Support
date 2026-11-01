@@ -7,7 +7,7 @@ from agentic.app.cli import (
     _should_start_new_ticket,
 )
 from agentic.data.tickets.TicketStore import TicketStore
-from agentic.agents.escalation.handoff import HANDOFF_NOTICE
+from agentic.orchestration.workflow.handoff import HANDOFF_NOTICE
 from agentic.orchestration.orchestration import customer_message_for_state
 
 
@@ -77,35 +77,36 @@ def test_chat_uses_the_fixed_prompt_to_choose_ticket_lifecycle(
 
 def test_cli_projects_only_the_active_customer_message():
     assert customer_message_for_state({
-        "ticket": {"status": "waiting_reply"},
+        "ticket": {},
         "confirm": {"prompt": "确认取消预约？"},
         "clarify": {"prompt": "请提供预约编号。"},
     }) == "确认取消预约？"
     assert customer_message_for_state({
-        "ticket": {"status": "waiting_reply"},
+        "ticket": {},
         "confirm": {"prompt": None},
         "clarify": {"prompt": "请提供预约编号。"},
     }) == "请提供预约编号。"
     assert customer_message_for_state({
-        "ticket": {"status": "waiting_reply"},
+        "ticket": {},
         "confirm": {"prompt": None},
         "clarify": {"prompt": None},
         "supervisor": {"message": "此前的已完成答案。"},
     }) is None
     assert customer_message_for_state({
-        "ticket": {"status": "handed_off"},
+        "ticket": {},
+        "supervisor": {"intent": "escalation", "message": HANDOFF_NOTICE},
     }) == HANDOFF_NOTICE
     assert customer_message_for_state({
-        "ticket": {"status": "completed"},
+        "ticket": {},
         "query": {"answer": "已验证答案。", "validated": True},
         "supervisor": {"message": None},
     }) is None
     assert customer_message_for_state({
-        "ticket": {"status": "completed"},
+        "ticket": {},
         "query": {"answer": "已验证答案。", "validated": True},
         "supervisor": {"message": "supervisor 组织后的答案。"},
     }) == "supervisor 组织后的答案。"
     assert customer_message_for_state({
-        "ticket": {"status": "completed"},
+        "ticket": {},
         "query": {"answer": "未校核内容。", "validated": False},
     }) is None

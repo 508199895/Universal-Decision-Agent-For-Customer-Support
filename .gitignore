@@ -75,12 +75,14 @@ env/
 !/README.md
 /AGENTS.md
 /agentic/agents/history/
+/agentic/agents/*/history/
 
 # Local evaluation outputs and archived retrieval snapshots
 /evals/results/
 /agentic/evals/results/
 /evals/datasets/history/
 /agentic/evals/datasets/history/
+/.tmp/
 
 
 

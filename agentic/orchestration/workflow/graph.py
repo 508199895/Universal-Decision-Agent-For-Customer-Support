@@ -3,38 +3,38 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
-from typing import Any, Sequence
+import re
+from collections.abc import Mapping, Sequence
+from pathlib import Path
+from typing import Any
 
-from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from langgraph.types import RunnableConfig
+import yaml
 
-from agentic.agents.agent import get_agent_soul
-from agentic.agents.prompt import apply_prompt_template
-from agentic.agents.supervisor.contract import SupervisorResponse
-from agentic.agents.validate.contract import ValidateResult
-from agentic.capabilities.tools.account_tools import bind_current_user_account_tools
-from agentic.capabilities.middleware.token_control import (
-    TicketRuntimeContext,
-    build_ticket_middleware,
+from agentic.agents.agent import (
+    wrap_agent_graph,
 )
-from agentic.capabilities.tools.support_toolset import validate_support_tools
+from agentic.config import AGENTIC_ROOT
+from agentic.agents.public_knowledge.state import ValidateResult
+from agentic.agents.supervisor.contract import SupervisorResponse
+from agentic.capabilities.tools.account_tools import bind_current_user_account_tools
+from agentic.capabilities.middleware.token_control import TicketRuntimeContext
 from agentic.capabilities.tools.clarification import ask_clarification
 from agentic.capabilities.tools.feishu_handoff import (
     FeishuTextSender,
     build_feishu_handoff_tool,
 )
-from agentic.agents.agent_wrappers import (
-    build_account_agent_tool, build_public_knowledge_tool,
-    build_query_validate_subgraph,
+from agentic.orchestration.workflow.handoff import (
+    HANDOFF_NOTICE,
+    build_handoff_messages,
 )
-from agentic.agents.escalation.handoff import build_handoff_messages
 from agentic.orchestration.workflow.state import (
     WorkflowState, merge_patch, validate_state,
 )
@@ -51,6 +51,17 @@ def _context_ticket_id(context: TicketRuntimeContext) -> str:
     return ticket_id
 
 
+def _tool_message_payload(message: Any) -> dict[str, Any]:
+    content = getattr(message, "content", None)
+    if not isinstance(content, str):
+        return {}
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _successful_handoff(messages: Any) -> dict[str, str] | None:
     if not isinstance(messages, list):
         return None
@@ -59,22 +70,19 @@ def _successful_handoff(messages: Any) -> dict[str, str] | None:
             message, "name", None
         ) != "request_human_handoff":
             continue
-        content = getattr(message, "content", None)
-        if not isinstance(content, str):
-            continue
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError:
-            continue
+        result = _tool_message_payload(message)
         if isinstance(result, dict) and result.get("status") == "sent":
             return result
     return None
 
 
 def _attempted_handoff(messages: Any) -> bool:
-    return isinstance(messages, list) and any(
+    if not isinstance(messages, list):
+        return False
+    return any(
         getattr(message, "type", None) == "tool"
         and getattr(message, "name", None) == "request_human_handoff"
+        and _tool_message_payload(message).get("status") not in {"blocked", "deferred"}
         for message in messages
     )
 
@@ -87,13 +95,7 @@ def _successful_clarification(messages: Any) -> dict[str, str] | None:
             message, "name", None
         ) != "ask_clarification":
             continue
-        content = getattr(message, "content", None)
-        if not isinstance(content, str):
-            continue
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError:
-            continue
+        result = _tool_message_payload(message)
         if not isinstance(result, dict) or result.get("status") != "asked":
             continue
         question = result.get("question")
@@ -103,9 +105,14 @@ def _successful_clarification(messages: Any) -> dict[str, str] | None:
 
 
 def _attempted_clarification(messages: Any) -> bool:
-    return isinstance(messages, list) and any(
+    if not isinstance(messages, list):
+        return False
+    return any(
         getattr(message, "type", None) == "tool"
         and getattr(message, "name", None) == "ask_clarification"
+        and _tool_message_payload(message).get("status") not in {
+            "asked", "deferred", "blocked", "error",
+        }
         for message in messages
     )
 
@@ -124,10 +131,6 @@ async def _supervisor_node(
         config=config,
         context=context,
     ), timeout=60)
-    structured = result.get("structured_response") if isinstance(result, dict) else result
-    response = (structured if isinstance(structured, SupervisorResponse)
-                else SupervisorResponse.model_validate(structured))
-
     supervisor_messages = result.get("messages", []) if isinstance(result, dict) else []
     handoff_result = _successful_handoff(supervisor_messages)
     clarification_result = _successful_clarification(supervisor_messages)
@@ -137,28 +140,25 @@ async def _supervisor_node(
         raise RuntimeError("Clarification tool did not confirm a customer-facing question")
     if handoff_result is not None and clarification_result is not None:
         raise RuntimeError("Supervisor cannot clarify and hand off in the same ticket run")
-    if (
-        response.requires_handoff
-        and handoff_result is None
-        and clarification_result is None
-    ):
+
+    response = None
+    if clarification_result is None:
+        structured = result.get("structured_response") if isinstance(result, dict) else result
+        response = (structured if isinstance(structured, SupervisorResponse)
+                    else SupervisorResponse.model_validate(structured))
+
+    if response is not None and response.requires_handoff and handoff_result is None:
         raise RuntimeError("Supervisor requested handoff without calling the Feishu tool")
 
     ticket_id = _context_ticket_id(context)
     updated = merge_patch(state, {"clarify": {"prompt": None}}, writer="boundary")
     if handoff_result is not None:
-        if response.answer == "":
-            customer_message = "当前请求将转交人工核查。"
-        else:
-            customer_message = response.answer
-        if not response.requires_handoff:
-            customer_message = "当前请求将转交人工核查。"
+        customer_message = HANDOFF_NOTICE
         updated = merge_patch(updated, {"escalation": {
             "summary": handoff_result["summary"],
             "description": handoff_result["description"],
         }}, writer="escalation")
-        updated = merge_patch(updated, {"ticket": {"status": "handed_off"},
-            "supervisor": {
+        updated = merge_patch(updated, {"supervisor": {
                 "intent": "escalation", "next_node": "finish",
                 "message": customer_message,
             }}, writer="boundary")
@@ -185,8 +185,7 @@ async def _supervisor_node(
             clarification_result["question"]
             if clarification_result is not None else response.answer
         )
-        updated = merge_patch(updated, {"ticket": {"status": "completed"},
-            "supervisor": {
+        updated = merge_patch(updated, {"supervisor": {
                 "next_node": "finish", "message": customer_message,
             }}, writer="boundary")
         messages = list(updated["messages"])
@@ -223,7 +222,7 @@ def build_workflow(*, checkpointer: BaseCheckpointSaver, supervisor_agent):
 
 
 class WorkflowManager:
-    """Assemble configured agents and compile the ticket graph."""
+    """Load the selected workflow, bind configured Agents, and compile the graph."""
 
     def __init__(self) -> None:
         self.graph = None
@@ -231,107 +230,100 @@ class WorkflowManager:
     def initialize(
         self,
         *,
-        model: BaseChatModel,
+        app_config: Mapping[str, Any],
+        models: Mapping[str, Any],
         tools: Sequence[BaseTool],
         checkpointer: BaseCheckpointSaver,
         handoff_sender: FeishuTextSender | None = None,
     ):
-        """Build and cache the graph; model and tool registries stay local to assembly."""
+        """Build and cache the configured graph using application-scoped resources."""
         if self.graph is not None:
             return self.graph
-        if model is None or checkpointer is None:
-            raise ValueError("workflow initialization requires model and checkpointer")
+        if checkpointer is None or not models:
+            raise ValueError("workflow initialization requires models and a durable checkpointer")
 
-        available_tools: dict[str, BaseTool] = {}
+        workflow_selection = app_config.get("workflow")
+        if not isinstance(workflow_selection, Mapping):
+            raise ValueError("app config must select a workflow")
+        workflow_dir = (AGENTIC_ROOT / workflow_selection["directory"]).resolve()
+        workflow_path = workflow_dir / f"{workflow_selection['name']}.yaml"
+        try:
+            workflow_dir.relative_to(AGENTIC_ROOT.resolve())
+        except ValueError as error:
+            raise ValueError("workflow config directory must stay within agentic") from error
+        try:
+            workflow_config = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as error:
+            raise ValueError(f"could not read workflow config {workflow_path}: {error}") from error
+        if not isinstance(workflow_config, dict) or set(workflow_config) != {
+            "main_agent", "expert_agents",
+        }:
+            raise ValueError(
+                f"workflow config {workflow_path} must contain main_agent and expert_agents"
+            )
+        main_agent_name = workflow_config["main_agent"]
+        expert_names = workflow_config["expert_agents"]
+        if not isinstance(main_agent_name, str) or not isinstance(expert_names, list) or any(
+            not isinstance(name, str) for name in expert_names
+        ):
+            raise ValueError("workflow Agent names must be strings")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", main_agent_name) or any(
+            not re.fullmatch(r"[A-Za-z0-9_-]+", name) for name in expert_names
+        ):
+            raise ValueError("workflow Agent names must be simple identifiers")
+        if len(expert_names) != len(set(expert_names)) or main_agent_name in expert_names:
+            raise ValueError("workflow Agent list contains duplicates")
 
-        def add_tool(tool: BaseTool) -> None:
-            available_tools.setdefault(tool.name, tool)
+        globally_enabled = set(app_config["tools"]["enabled"])
+        tool_catalog: dict[str, BaseTool] = {}
 
-        def add_tools(tools_to_add: Sequence[BaseTool]) -> None:
-            for tool in tools_to_add:
-                add_tool(tool)
+        def register(candidate: BaseTool) -> None:
+            if candidate.name in tool_catalog:
+                raise ValueError(f"duplicate tool name: {candidate.name}")
+            tool_catalog[candidate.name] = candidate
 
-        add_tools(bind_current_user_account_tools(validate_support_tools(tools)))
-        add_tool(ask_clarification)
-        context_schemas = {"ticket_runtime": TicketRuntimeContext, None: None}
-        response_formats = {
-            "supervisor_response": SupervisorResponse,
-            "validate_result": ValidateResult,
-            None: None,
+        for candidate in bind_current_user_account_tools(tools):
+            register(candidate)
+        register(ask_clarification)
+        register(build_feishu_handoff_tool(handoff_sender))
+        missing_enabled = sorted(globally_enabled - tool_catalog.keys())
+        if missing_enabled:
+            raise ValueError(
+                "globally enabled tools are unavailable: " + ", ".join(missing_enabled)
+            )
+        available_tools = {
+            name: tool_catalog[name] for name in sorted(globally_enabled)
         }
 
-        def build_agent(name: str, allowed_tools: dict[str, BaseTool]):
-            config = get_agent_soul(name)
-            model_name = config.get("model", "runtime")
-            if model_name != "runtime":
-                raise ValueError(f"agent {name} references unknown model: {model_name}")
-
-            tool_names = config.get("tools", [])
-            if not isinstance(tool_names, list) or any(
-                not isinstance(tool_name, str) for tool_name in tool_names
-            ):
-                raise ValueError(f"agent {name} tools must be a list of tool-name identifiers")
-            if len(tool_names) != len(set(tool_names)):
-                raise ValueError(f"agent {name} tools must not contain duplicate names")
-            missing_tools = sorted(set(tool_names) - allowed_tools.keys())
-            if missing_tools:
-                raise ValueError(
-                    f"agent {name} references unavailable tools: {', '.join(missing_tools)}"
-                )
-
-            middleware_names = config.get("middleware", ["ticket_runtime"])
-            if not isinstance(middleware_names, list) or any(
-                not isinstance(item, str) for item in middleware_names
-            ):
-                raise ValueError(f"agent {name} middleware must be a list of identifiers")
-            middleware = []
-            for middleware_name in middleware_names:
-                if middleware_name != "ticket_runtime":
-                    raise ValueError(
-                        f"agent {name} references unknown middleware: {middleware_name}"
-                    )
-                middleware.extend(build_ticket_middleware(model))
-
-            context_name = config.get("context_schema", "ticket_runtime")
-            if (
-                context_name is not None and not isinstance(context_name, str)
-            ) or context_name not in context_schemas:
-                raise ValueError(f"agent {name} references unknown context schema: {context_name}")
-            response_name = config.get("response_format")
-            if (
-                response_name is not None and not isinstance(response_name, str)
-            ) or response_name not in response_formats:
-                raise ValueError(f"agent {name} references unknown response format: {response_name}")
-
-            kwargs = {
-                "model": model,
-                "tools": [allowed_tools[item] for item in tool_names],
-                "middleware": middleware,
-                "system_prompt": apply_prompt_template(config["prompt"]),
-            }
-            if response_formats[response_name] is not None:
-                kwargs["response_format"] = response_formats[response_name]
-            if context_schemas[context_name] is not None:
-                kwargs["context_schema"] = context_schemas[context_name]
-            return create_agent(**kwargs)
-
-        query_agent = build_agent("query", available_tools)
-        validate_agent = build_agent("validate", available_tools)
-        account_agent = build_agent("account", available_tools)
-        handoff_tool = build_feishu_handoff_tool(handoff_sender)
-        add_tool(handoff_tool)
-        query_validate_subgraph = build_query_validate_subgraph(
-            query_agent=query_agent,
-            validate_agent=validate_agent,
+        expert_tools: list[BaseTool] = []
+        for expert_name in expert_names:
+            if not expert_name.replace("_", "").isalnum():
+                raise ValueError(f"invalid expert Agent name: {expert_name!r}")
+            module = importlib.import_module(f"agentic.agents.{expert_name}.graph")
+            expert_graph = module.build_graph(
+                app_config=app_config,
+                models=models,
+                available_tools=available_tools,
+            )
+            expert_tools.append(wrap_agent_graph(
+                graph=expert_graph,
+                name=module.TOOL_NAME,
+                description=module.TOOL_DESCRIPTION,
+            ))
+        expert_tool_names = [tool.name for tool in expert_tools]
+        if len(expert_tool_names) != len(set(expert_tool_names)) or any(
+            name in available_tools for name in expert_tool_names
+        ):
+            raise ValueError("workflow expert tool names must be unique")
+        main_module = importlib.import_module(f"agentic.agents.{main_agent_name}.graph")
+        main_agent = main_module.build_graph(
+            app_config=app_config,
+            models=models,
+            available_tools=available_tools,
+            extra_tools=expert_tools,
         )
-        agent_tools = (
-            build_public_knowledge_tool(subgraph=query_validate_subgraph),
-            build_account_agent_tool(account_agent=account_agent),
-        )
-        add_tools(agent_tools)
-        supervisor_agent = build_agent("supervisor", available_tools)
         self.graph = build_workflow(
             checkpointer=checkpointer,
-            supervisor_agent=supervisor_agent,
+            supervisor_agent=main_agent,
         )
         return self.graph

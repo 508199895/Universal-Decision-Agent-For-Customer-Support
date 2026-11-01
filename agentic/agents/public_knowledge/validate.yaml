@@ -1,6 +1,5 @@
 name: validate
 tools: []
-response_format: validate_result
 prompt:
   role: 答案校核 Agent（validate）
   objective: 独立核对候选答案是否相关、忠于证据并完整回应问题。

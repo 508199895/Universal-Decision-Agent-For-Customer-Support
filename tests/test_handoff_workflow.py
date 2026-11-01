@@ -8,7 +8,7 @@ import pytest
 
 from agentic.data.tickets.TicketStore import TicketStore
 from agentic.data.tickets.errors import TicketPersistenceError
-from agentic.orchestration.workflow.factory import (
+from agentic.orchestration.workflow.graph import (
     ValidateResult, SupervisorIntentResult,
     build_workflow,
 )
@@ -59,7 +59,7 @@ def test_handoff_uses_user_thread_and_shared_agent_state_messages(tmp_path):
     ))
 
     assert result["ticket"]["ticket_id"] == "ticket-1"
-    assert result["ticket"]["status"] == "handed_off"
+    assert result["supervisor"]["intent"] == "escalation"
     assert "messages" not in result["ticket"]
     assert "[human] 请取消我的预订。" in agent.payloads[0]["messages"][0].content
     assert [(item.id, item.type) for item in result["messages"]] == [
@@ -161,7 +161,7 @@ def test_model_failure_keeps_ticket_checkpoint_and_retry_does_not_duplicate_mess
     ))
 
     assert agent.attempts == 2
-    assert result["ticket"]["status"] == "handed_off"
+    assert result["supervisor"]["intent"] == "escalation"
     assert store.status("ticket-1") == "completed"
     assert [item.id for item in result["messages"]].count("customer-1") == 1
 
@@ -207,7 +207,7 @@ def test_initial_checkpoint_interruption_is_rebuilt_from_ticket_events(tmp_path)
     ))
 
     assert result["ticket"]["ticket_id"] == "ticket-1"
-    assert result["ticket"]["status"] == "handed_off"
+    assert result["supervisor"]["intent"] == "escalation"
     assert store.status("ticket-1") == "completed"
     assert [item.id for item in result["messages"]].count("customer-1") == 1
     events = store.event_store.events(user_id="user-1", ticket_id="ticket-1")
@@ -331,18 +331,17 @@ def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_p
     store = TicketStore(database)
 
     async def await_reply(state):
-        status = "completed" if state["ticket"]["input"] == "done" else "waiting_reply"
-        if status == "completed":
+        if state["ticket"]["input"] == "done":
             return {
-                "ticket": {**state["ticket"], "status": status},
                 "query": {**state["query"], "answer": "已完成。", "validated": True},
+                "supervisor": {**state["supervisor"], "message": "已完成。"},
             }
-        return {"ticket": {**state["ticket"], "status": status}}
+        return {"supervisor": {**state["supervisor"], "message": "请补充所需信息。"}}
 
     builder = StateGraph(WorkflowState)
-    builder.add_node("await_reply", await_reply)
-    builder.add_edge(START, "await_reply")
-    builder.add_edge("await_reply", END)
+    builder.add_node("supervisor", await_reply)
+    builder.add_edge(START, "supervisor")
+    builder.add_edge("supervisor", END)
 
     async def converse():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
@@ -358,9 +357,8 @@ def test_latest_unfinished_ticket_continues_and_commits_its_terminal_event(tmp_p
 
     first, continued = asyncio.run(converse())
 
-    assert first["ticket"]["status"] == "waiting_reply"
     assert continued["ticket"]["ticket_id"] == first["ticket"]["ticket_id"]
-    assert continued["ticket"]["status"] == "completed"
+    assert continued["supervisor"]["message"] == "已完成。"
     assert [message.id for message in continued["messages"]] == ["customer-1", "customer-2"]
     assert store.status(first["ticket"]["ticket_id"]) == "completed"
     terminal_events = [
@@ -376,12 +374,12 @@ def test_selected_pending_ticket_is_used_instead_of_completed_checkpoint(tmp_pat
     store = TicketStore(database)
 
     async def await_reply(state):
-        return {"ticket": {**state["ticket"], "status": "waiting_reply"}}
+        return {"supervisor": {**state["supervisor"], "message": "请补充所需信息。"}}
 
     builder = StateGraph(WorkflowState)
-    builder.add_node("await_reply", await_reply)
-    builder.add_edge(START, "await_reply")
-    builder.add_edge("await_reply", END)
+    builder.add_node("supervisor", await_reply)
+    builder.add_edge(START, "supervisor")
+    builder.add_edge("supervisor", END)
 
     async def continue_selected_pending_ticket():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
@@ -414,15 +412,15 @@ def test_existing_checkpoint_takes_precedence_over_another_pending_ticket(tmp_pa
     async def await_reply(state):
         if state["ticket"]["input"] == "done":
             return {
-                "ticket": {**state["ticket"], "status": "completed"},
                 "query": {**state["query"], "answer": "已完成。", "validated": True},
+                "supervisor": {**state["supervisor"], "message": "已完成。"},
             }
-        return {"ticket": {**state["ticket"], "status": "waiting_reply"}}
+        return {"supervisor": {**state["supervisor"], "message": "请补充所需信息。"}}
 
     builder = StateGraph(WorkflowState)
-    builder.add_node("await_reply", await_reply)
-    builder.add_edge(START, "await_reply")
-    builder.add_edge("await_reply", END)
+    builder.add_node("supervisor", await_reply)
+    builder.add_edge(START, "supervisor")
+    builder.add_edge("supervisor", END)
 
     async def continue_current_checkpoint():
         async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
@@ -443,6 +441,6 @@ def test_existing_checkpoint_takes_precedence_over_another_pending_ticket(tmp_pa
     result = asyncio.run(continue_current_checkpoint())
 
     assert result["ticket"]["ticket_id"] == "ticket-current"
-    assert result["ticket"]["status"] == "completed"
+    assert result["supervisor"]["message"] == "已完成。"
     assert [message.id for message in result["messages"]] == ["customer-1", "customer-2"]
     assert store.status("ticket-pending") == "pending"
