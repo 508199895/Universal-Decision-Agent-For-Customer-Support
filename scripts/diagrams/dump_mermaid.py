@@ -1,17 +1,12 @@
-from agentic.orchestration.workflow.graph import build_workflow
-from langgraph.checkpoint.memory import MemorySaver
+import asyncio
+
+from agentic.lifespan.runtime import default_workflow_runtime
 
 
-class DiagramAgent:
-    async def ainvoke(self, _payload):
-        return {"summary": "", "description": ""}
+async def main():
+    async with default_workflow_runtime() as (workflow, *_):
+        print(workflow.get_graph().draw_mermaid())
+
 
 if __name__ == "__main__":
-    graph = build_workflow(
-        checkpointer=MemorySaver(),
-        escalation_agent=DiagramAgent(),
-    ).get_graph()
-
-    mermaid = graph.draw_mermaid()
-
-    print(mermaid)
+    asyncio.run(main())

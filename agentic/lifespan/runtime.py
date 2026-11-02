@@ -20,7 +20,7 @@ from agentic.data.tickets.TicketEventStore import TicketEventStore
 from agentic.data.tickets.TicketStore import TicketStore
 from agentic.orchestration.ticket.manager import TicketManager
 from agentic.config import load_app_config
-from agentic.orchestration.workflow.graph import build_workflow, WorkflowManager
+from agentic.orchestration.workflow.graph import WorkflowManager
 
 
 def _default_agent_database() -> Path:
@@ -73,20 +73,6 @@ def _default_model(model_config: Mapping[str, Any] | None = None) -> BaseChatMod
     return ChatOpenAI(
         **model_kwargs,
     )
-
-
-@asynccontextmanager
-async def persistent_workflow(
-    database: str | os.PathLike,
-    *,
-    supervisor_agent,
-):
-    """Open a workflow and keep its saver alive for the context lifetime."""
-    async with AsyncSqliteSaver.from_conn_string(str(database)) as checkpointer:
-        yield build_workflow(
-            checkpointer=checkpointer,
-            supervisor_agent=supervisor_agent,
-        )
 
 
 @asynccontextmanager

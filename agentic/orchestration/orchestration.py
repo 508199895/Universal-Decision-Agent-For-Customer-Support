@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from langchain_core.messages import HumanMessage, RemoveMessage
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.graph import START
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
@@ -33,15 +33,37 @@ logger = logging.getLogger(__name__)
 
 
 async def astream_workflow(workflow, payload, *, config, context):
-    """Stream node updates from one workflow invocation."""
+    """Stream Agent messages and tool-authored terminal response events."""
     async for update in workflow.astream(
         payload,
         config=config,
         context=context,
         durability="async",
-        stream_mode="updates",
+        stream_mode=["messages", "custom"],
+        version="v2",
     ):
         yield update
+
+
+def _streamed_answer(chunks: dict[str, dict[str, Any]]) -> str | None:
+    for entry in reversed(list(chunks.values())):
+        if entry["has_tool_calls"]:
+            continue
+        content = "".join(entry["content"])
+        if content.strip():
+            return content.strip()
+    return None
+
+
+def _message_chunk_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "") if isinstance(block, dict) else ""
+            for block in content
+        )
+    return ""
 
 
 @dataclass(frozen=True)
@@ -185,6 +207,7 @@ async def run_workflow(
     journal: TicketJournal | None = None
     workflow_completed = False
     supervisor_reply: str | None = None
+    terminal_event: dict[str, Any] | None = None
     user_context_token = set_current_user_id(user_id)
     try:
         ticket_id = run_record.ticket_id
@@ -248,6 +271,17 @@ async def run_workflow(
                 "ticket": latest_ticket,
                 "messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES), *messages],
             }
+            state_update["clarify"] = {
+                **dict(latest_state.get("clarify") or {}),
+                "prompt": None,
+            }
+            state_update["supervisor"] = {
+                **dict(latest_state.get("supervisor") or {}),
+                "intent": "unknown",
+                "next_node": None,
+                "query_instruction": None,
+                "message": None,
+            }
         else:
             state_update = initial_state(
                 owner_id=external_user_id, owner_name=user_name, message=message,
@@ -281,25 +315,90 @@ async def run_workflow(
                 runnable_config["tags"] = trace_config["tags"]
                 runnable_config["callbacks"].extend(trace_config["callbacks"])
 
+            streamed_messages: dict[str, dict[str, Any]] = {}
             async for update in astream_workflow(
                 workflow, None, config=runnable_config, context=runtime_context,
             ):
                 if not isinstance(update, dict):
                     continue
-                supervisor_state = update.get("supervisor")
-                supervisor_group = (
-                    supervisor_state.get("supervisor")
-                    if isinstance(supervisor_state, dict) else None
-                )
-                if isinstance(supervisor_group, dict):
-                    reply = supervisor_group.get("message")
-                    if isinstance(reply, str) and reply.strip():
-                        supervisor_reply = reply
+                if update.get("type") == "custom":
+                    event = update.get("data")
+                    if (
+                        isinstance(event, dict)
+                        and event.get("event") == "terminal_response"
+                        and event.get("tool") in {"ask_clarification", "request_human_handoff"}
+                        and event.get("status") in {"success", "failure"}
+                        and isinstance(event.get("message"), str)
+                        and event["message"].strip()
+                    ):
+                        terminal_event = event
+                elif update.get("type") == "messages":
+                    data = update.get("data")
+                    if not isinstance(data, tuple) or len(data) != 2:
+                        continue
+                    message_chunk, metadata = data
+                    if getattr(message_chunk, "type", None) not in {"AIMessageChunk", "ai"}:
+                        continue
+                    message_id = getattr(message_chunk, "id", None)
+                    if not isinstance(message_id, str) or not message_id:
+                        message_id = str((metadata or {}).get("langgraph_node", "agent"))
+                    entry = streamed_messages.setdefault(message_id, {
+                        "content": [], "has_tool_calls": False,
+                    })
+                    if (
+                        getattr(message_chunk, "tool_call_chunks", None)
+                        or getattr(message_chunk, "tool_calls", None)
+                    ):
+                        entry["has_tool_calls"] = True
+                    entry["content"].append(_message_chunk_text(message_chunk.content))
 
             final_snapshot = await workflow.aget_state(runnable_config)
             result = dict(final_snapshot.values or {})
+            if terminal_event is not None:
+                supervisor_reply = terminal_event["message"].strip()
+                terminal_message = AIMessage(
+                    content=supervisor_reply,
+                    id=f"agent:{message.id}:terminal-reply",
+                )
+                state_patch: dict[str, Any] = {
+                    "messages": [terminal_message],
+                }
+                supervisor_state = dict(result.get("supervisor") or {})
+                supervisor_state.update(next_node="finish", message=supervisor_reply)
+                clarify_state = dict(result.get("clarify") or {})
+                if terminal_event["tool"] == "ask_clarification":
+                    clarify_state["prompt"] = (
+                        supervisor_reply if terminal_event["status"] == "success" else None
+                    )
+                    supervisor_state["next_node"] = (
+                        "clarify" if terminal_event["status"] == "success" else "finish"
+                    )
+                    state_patch.update(supervisor=supervisor_state, clarify=clarify_state)
+                    result["clarify"] = clarify_state
+                else:
+                    summary = terminal_event.get("summary")
+                    description = terminal_event.get("description")
+                    escalation_state = dict(result.get("escalation") or {})
+                    if isinstance(summary, str) and summary.strip():
+                        escalation_state["summary"] = summary.strip()
+                    if isinstance(description, str) and description.strip():
+                        escalation_state["description"] = description.strip()
+                    if escalation_state.get("summary") and escalation_state.get("description"):
+                        supervisor_state["intent"] = "escalation"
+                        state_patch["escalation"] = escalation_state
+                        result["escalation"] = escalation_state
+                    result["supervisor"] = supervisor_state
+                    state_patch["supervisor"] = supervisor_state
+                await workflow.aupdate_state(runnable_config, state_patch)
+                result_messages = list(result.get("messages") or [])
+                if not any(getattr(item, "id", None) == terminal_message.id for item in result_messages):
+                    result_messages.append(terminal_message)
+                result["messages"] = result_messages
+                result["supervisor"] = supervisor_state
+            else:
+                supervisor_reply = _streamed_answer(streamed_messages)
             if not isinstance(supervisor_reply, str) or not supervisor_reply.strip():
-                raise RuntimeError("workflow stream did not produce a supervisor reply")
+                raise RuntimeError("workflow message stream did not produce a customer reply")
             result["supervisor"] = {
                 **dict(result.get("supervisor") or {}),
                 "message": supervisor_reply,

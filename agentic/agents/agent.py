@@ -22,8 +22,8 @@ from agentic.capabilities.middleware.token_control import (
     TicketRuntimeContext,
     build_ticket_middleware,
 )
-from agentic.capabilities.middleware.clarification_coordinator import (
-    ClarificationCoordinatorMiddleware,
+from agentic.capabilities.middleware.tool_restriction import (
+    ToolRestrictionMiddleware,
 )
 
 
@@ -107,6 +107,8 @@ def build_agent_from_config(
     models: Mapping[str, BaseChatModel],
     available_tools: Mapping[str, BaseTool],
     response_format: Any | None = None,
+    state_schema: Any | None = None,
+    checkpointer: Any | None = None,
     config_filename: str | None = None,
     extra_tools: Sequence[BaseTool] = (),
 ):
@@ -132,8 +134,8 @@ def build_agent_from_config(
     for name in middleware_names:
         if name == "ticket_runtime":
             middleware.extend(build_ticket_middleware(model))
-        elif name == "clarification_coordinator":
-            middleware.append(ClarificationCoordinatorMiddleware())
+        elif name == "tool_restriction":
+            middleware.append(ToolRestrictionMiddleware())
         else:
             raise ValueError(f"Agent {agent_name} references unknown middleware: {name}")
 
@@ -148,6 +150,10 @@ def build_agent_from_config(
     }
     if response_format is not None:
         kwargs["response_format"] = response_format
+    if state_schema is not None:
+        kwargs["state_schema"] = state_schema
+    if checkpointer is not None:
+        kwargs["checkpointer"] = checkpointer
     if context_schema == "ticket_runtime":
         kwargs["context_schema"] = TicketRuntimeContext
     return create_agent(**kwargs)
