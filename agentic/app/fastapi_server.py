@@ -11,11 +11,13 @@ from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from data.models.udahub import User as CoreUser
+from agentic.app.event_stream import TicketEventPublisher, UserEventHub, encode_sse
 from agentic.capabilities.feishu import create_feishu_channel, send_feishu_text
 from agentic.config import load_app_config
 from agentic.lifespan.runtime import default_workflow_runtime
@@ -132,6 +134,11 @@ async def lifespan(app: FastAPI):
             app.state.ticket_manager = ticket_manager
             app.state.ticket_store = ticket_store
             app.state.ticket_event_store = ticket_event_store
+            app.state.ticket_event_hub = UserEventHub()
+            app.state.ticket_event_publisher = TicketEventPublisher(
+                ticket_event_store,
+                app.state.ticket_event_hub,
+            )
             app.state.workflow_ready = True
             yield
         finally:
@@ -146,6 +153,41 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Customer Support API and Feishu Bridge", lifespan=lifespan)
+
+
+@app.get("/events")
+async def stream_customer_events(
+    request: Request,
+    user_id: str = Query(min_length=1),
+) -> StreamingResponse:
+    """Stream live customer-visible events for an existing user."""
+    async with request.app.state.user_session_factory() as session:
+        user = await session.scalar(
+            select(CoreUser).where(CoreUser.user_id == user_id)
+        )
+    if user is None:
+        raise HTTPException(status_code=404, detail="User was not found.")
+
+    async def events():
+        async with request.app.state.ticket_event_hub.subscribe(user_id) as queue:
+            yield ": connected\n\n"
+            while not await request.is_disconnected():
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                except TimeoutError:
+                    yield ": keep-alive\n\n"
+                    continue
+                yield encode_sse(event)
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/health")

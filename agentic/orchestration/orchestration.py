@@ -16,12 +16,10 @@ from langgraph.graph import START
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.types import RunnableConfig
 
+from agentic.app.event_stream import TicketEventPublisher
 from agentic.capabilities.middleware.token_control import TicketRuntimeContext
 from agentic.data.tickets.ticket_journal import TicketJournal
 from agentic.data.tickets.TicketEventStore import TicketEventStore
-from agentic.data.tickets.TicketStore import (
-    TicketStore,
-)
 from agentic.data.tickets.user_context import reset_current_user_id, set_current_user_id
 from agentic.observability.langsmith_tracing import build_trace_config
 from agentic.orchestration.ticket.manager import TicketManager, TicketRecord
@@ -33,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 async def astream_workflow(workflow, payload, *, config, context):
-    """Stream Agent messages and tool-authored terminal response events."""
+    """Stream supervisor model messages and tool-authored terminal responses."""
     async for update in workflow.astream(
         payload,
         config=config,
@@ -66,15 +64,37 @@ def _message_chunk_text(content: Any) -> str:
     return ""
 
 
+async def _set_ticket_status(
+    manager: TicketManager,
+    record: TicketRecord,
+    ctx: TicketWorkflowContext,
+    status: str,
+    *,
+    event_publisher: TicketEventPublisher | None,
+    error: str | None = None,
+) -> None:
+    await manager.set_status(record.ticket_id, status, error=error)
+    if event_publisher is None:
+        return
+    try:
+        await event_publisher.publish(
+            user_id=ctx.user_id,
+            ticket_id=record.ticket_id,
+            event_type="ticket.status",
+            category="outputs",
+            data={"status": status},
+        )
+    except Exception:
+        logger.exception("Could not publish ticket status for %s", record.ticket_id)
+
+
 @dataclass(frozen=True)
 class TicketWorkflowContext:
-    """Long-lived resources and authenticated identity for one ticket task."""
+    """Per-ticket identity and event storage context for one ticket task."""
 
     user_id: str
     external_user_id: str
     user_name: str | None
-    workflow: Any
-    ticket_store: TicketStore
     ticket_event_store: TicketEventStore
 
 
@@ -85,7 +105,11 @@ async def start_ticket(body: TicketStartBody, user_id: str, request: Any) -> Tic
     if not isinstance(user_id, str) or not user_id.strip():
         raise ValueError("user_id must be a non-empty string")
 
+    workflow = request.app.state.workflow
     context = _ticket_workflow_context(user_id, request)
+    event_publisher: TicketEventPublisher | None = getattr(
+        request.app.state, "ticket_event_publisher", None,
+    )
     message = _message_from_ticket_body(body)
     metadata_fields = body.metadata or {}
     config_overrides = body.config or {}
@@ -108,10 +132,28 @@ async def start_ticket(body: TicketStartBody, user_id: str, request: Any) -> Tic
         multitask_strategy=body.multitask_strategy,
         model_name=model_name,
     )
+    if event_publisher is not None:
+        try:
+            await event_publisher.publish(
+                user_id=user_id,
+                ticket_id=record.ticket_id,
+                event_type="message.accepted",
+                category="outputs",
+                data={"status": record.status.value},
+            )
+        except Exception:
+            await manager.set_status(
+                record.ticket_id,
+                "error",
+                error="Could not persist the ticket acceptance event.",
+            )
+            raise
     task = asyncio.create_task(
         run_workflow(
             manager, record, ctx=context, message=message,
             config_overrides=config_overrides,
+            workflow=workflow,
+            event_publisher=event_publisher,
         ),
         name=f"ticket:{record.ticket_id}",
     )
@@ -144,8 +186,6 @@ def _ticket_workflow_context(user_id: str, request: Any) -> TicketWorkflowContex
         user_id=user_id,
         external_user_id=external_user_id,
         user_name=user_name if isinstance(user_name, str) else None,
-        workflow=app_state.workflow,
-        ticket_store=app_state.ticket_store,
         ticket_event_store=app_state.ticket_event_store,
     )
 
@@ -190,14 +230,15 @@ async def run_workflow(
     *,
     ctx: TicketWorkflowContext,
     message: HumanMessage,
+    workflow: Any,
     config_overrides: dict[str, Any] | None = None,
+    event_publisher: TicketEventPublisher | None = None,
 ) -> WorkflowState:
     """Execute one admitted run, restoring active workflow state by user thread."""
     run_record = record
     user_id = ctx.user_id
     external_user_id = ctx.external_user_id
     user_name = ctx.user_name
-    workflow = ctx.workflow
     ticket_event_store = ctx.ticket_event_store
     thread_id = user_id
     config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
@@ -292,7 +333,9 @@ async def run_workflow(
 
         try:
             await workflow.aupdate_state(config, state_update, as_node=START)
-            await manager.set_status(run_record.ticket_id, "running")
+            await _set_ticket_status(
+                manager, run_record, ctx, "running", event_publisher=event_publisher,
+            )
             runnable_config: RunnableConfig = dict(config_overrides or {})
             configurable = runnable_config.get("configurable") or {}
             if not isinstance(configurable, dict):
@@ -337,11 +380,14 @@ async def run_workflow(
                     if not isinstance(data, tuple) or len(data) != 2:
                         continue
                     message_chunk, metadata = data
-                    if getattr(message_chunk, "type", None) not in {"AIMessageChunk", "ai"}:
+                    if (
+                        getattr(message_chunk, "type", None) not in {"AIMessageChunk", "ai"}
+                        or (metadata or {}).get("langgraph_node") != "model"
+                    ):
                         continue
                     message_id = getattr(message_chunk, "id", None)
                     if not isinstance(message_id, str) or not message_id:
-                        message_id = str((metadata or {}).get("langgraph_node", "agent"))
+                        message_id = "supervisor:model"
                     entry = streamed_messages.setdefault(message_id, {
                         "content": [], "has_tool_calls": False,
                     })
@@ -396,7 +442,13 @@ async def run_workflow(
                 result["messages"] = result_messages
                 result["supervisor"] = supervisor_state
             else:
-                supervisor_reply = _streamed_answer(streamed_messages)
+                supervisor_state = result.get("supervisor") or {}
+                candidate = supervisor_state.get("message")
+                supervisor_reply = (
+                    candidate.strip()
+                    if isinstance(candidate, str) and candidate.strip()
+                    else _streamed_answer(streamed_messages)
+                )
             if not isinstance(supervisor_reply, str) or not supervisor_reply.strip():
                 raise RuntimeError("workflow message stream did not produce a customer reply")
             result["supervisor"] = {
@@ -404,12 +456,25 @@ async def run_workflow(
                 "message": supervisor_reply,
             }
 
+            if event_publisher is not None:
+                await event_publisher.publish(
+                    user_id=user_id,
+                    ticket_id=ticket_id,
+                    event_type="assistant.message",
+                    category="message",
+                    data={"message": supervisor_reply},
+                )
+
             workflow_completed = True
             return result
         except asyncio.CancelledError:
             raise
         except Exception as error:
-            await manager.set_status(run_record.ticket_id, "error", error=str(error))
+            await _set_ticket_status(
+                manager, run_record, ctx, "error",
+                event_publisher=event_publisher,
+                error=str(error),
+            )
             raise
 
     except asyncio.CancelledError as cancel_error:
@@ -417,8 +482,10 @@ async def run_workflow(
             cancel_error.args and cancel_error.args[0] == "rollback"
         )
         if rollback_requested:
-            await manager.set_status(
-                run_record.ticket_id, "error", error="Rolled back by user",
+            await _set_ticket_status(
+                manager, run_record, ctx, "error",
+                event_publisher=event_publisher,
+                error="Rolled back by user",
             )
             try:
                 await _rollback_to_pre_run_checkpoint(
@@ -430,11 +497,17 @@ async def run_workflow(
                     "Ticket run %s rollback failed", run_record.ticket_id, exc_info=True,
                 )
         else:
-            await manager.set_status(run_record.ticket_id, "interrupted")
+            await _set_ticket_status(
+                manager, run_record, ctx, "interrupted", event_publisher=event_publisher,
+            )
         raise
     except Exception as error:
         if run_record.status.value in {"pending", "running"}:
-            await manager.set_status(run_record.ticket_id, "error", error=str(error))
+            await _set_ticket_status(
+                manager, run_record, ctx, "error",
+                event_publisher=event_publisher,
+                error=str(error),
+            )
         raise
     finally:
         try:
@@ -461,7 +534,9 @@ async def run_workflow(
                         exc_info=True,
                     )
             if workflow_completed and run_record.status.value in {"pending", "running"}:
-                await manager.set_status(run_record.ticket_id, "success")
+                await _set_ticket_status(
+                    manager, run_record, ctx, "success", event_publisher=event_publisher,
+                )
         finally:
             reset_current_user_id(user_context_token)
 

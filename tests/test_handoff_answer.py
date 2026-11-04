@@ -103,16 +103,16 @@ def test_final_supervisor_answer_is_persisted_as_last_ai_message(monkeypatch):
         user_id="user-1",
         external_user_id="external-user-1",
         user_name=None,
-        workflow=FakeWorkflow(),
-        ticket_store=object(),
         ticket_event_store=FakeEventStore(),
     )
+    workflow = FakeWorkflow()
 
     result = asyncio.run(run_workflow(
         manager,
         record,
         ctx=context,
         message=HumanMessage(content="请帮我取消预订。", id="customer-1"),
+        workflow=workflow,
     ))
 
     assert result["supervisor"]["message"] == answer
