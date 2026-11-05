@@ -93,7 +93,6 @@ agentic/
   app/                   FastAPI 应用与 SSE 事件流
   capabilities/          飞书、MCP 客户端、中间件和工具
   data/tickets/          工单、事件和对话记录存储
-  design/                Agent 与 MCP 架构资料
   evals/                 工作流和检索评估
   lifespan/              应用运行时资源初始化
   observability/         工作流追踪
@@ -109,7 +108,6 @@ data/
   core/                  核心用户数据
   external/              外部账户与预约数据
   models/                数据模型
-notebooks/               数据库准备 notebook
 scripts/                 数据迁移、开发和图表脚本
 tests/                   工作流、API、工单存储和工具测试
 ```
