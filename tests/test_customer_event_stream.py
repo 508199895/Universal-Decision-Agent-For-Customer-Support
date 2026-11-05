@@ -63,27 +63,37 @@ def test_ticket_event_publisher_persists_before_broadcasting():
     assert calls[1][1] == "user-1"
 
 
-def test_ticket_event_publisher_does_not_broadcast_when_persistence_fails():
+def test_ticket_event_publisher_broadcasts_live_event_when_persistence_fails():
+    published = []
+
     class EventStore:
         async def put(self, **_event):
             raise RuntimeError("database unavailable")
 
     class Hub:
-        def publish(self, *_args):
-            pytest.fail("failed persistence must not be published")
+        def publish(self, user_id, event):
+            published.append((user_id, event))
 
     async def exercise():
         publisher = TicketEventPublisher(EventStore(), Hub())
-        with pytest.raises(RuntimeError, match="database unavailable"):
-            await publisher.publish(
-                user_id="user-1",
-                ticket_id="ticket-1",
-                event_type="assistant.message",
-                category="message",
-                data={"message": "hello"},
-            )
+        event = await publisher.publish(
+            user_id="user-1",
+            ticket_id="ticket-1",
+            event_type="assistant.message",
+            category="message",
+            data={"message": "hello"},
+        )
+
+        assert event == {
+            "event": "assistant.message",
+            "data": {"message": "hello", "ticket_id": "ticket-1"},
+        }
 
     asyncio.run(exercise())
+    assert published == [("user-1", {
+        "event": "assistant.message",
+        "data": {"message": "hello", "ticket_id": "ticket-1"},
+    })]
 
 
 def test_sse_encoding_includes_id_type_and_json_data():
@@ -98,6 +108,10 @@ def test_sse_encoding_includes_id_type_and_json_data():
         "ticket_id": "ticket-1",
         "message": "你好",
     }
+    assert encode_sse({
+        "event": "assistant.message",
+        "data": {"ticket_id": "ticket-2", "message": "暂未保存"},
+    }).startswith("id:\nevent: assistant.message\ndata: ")
 
 
 def test_sse_endpoint_validates_user_and_streams_only_user_events():

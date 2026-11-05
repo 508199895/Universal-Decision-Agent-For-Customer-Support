@@ -51,7 +51,8 @@ export default function Home() {
   }, []);
 
   const hasSeenEvent = useCallback((eventId: string) => {
-    if (!eventId || seenEventIds.current.has(eventId)) return true;
+    if (!eventId) return false;
+    if (seenEventIds.current.has(eventId)) return true;
     seenEventIds.current.add(eventId);
     return false;
   }, []);
@@ -107,7 +108,7 @@ export default function Home() {
           return next;
         });
         setMessages((current) => [...current, {
-          id: `status:${event.lastEventId}`,
+          id: `status:${event.lastEventId || Date.now()}`,
           role: "system",
           ticketId,
           failed: status === "error" || status === "timeout" || status === "interrupted",
@@ -125,7 +126,7 @@ export default function Home() {
         const data = JSON.parse(event.data) as { ticket_id?: string; message?: string };
         if (!data.ticket_id || !data.message?.trim()) return;
         setMessages((current) => [...current, {
-          id: `assistant:${event.lastEventId}`,
+          id: `assistant:${event.lastEventId || Date.now()}`,
           role: "assistant",
           ticketId: data.ticket_id,
           text: data.message!,

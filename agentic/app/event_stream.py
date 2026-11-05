@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
@@ -11,6 +12,8 @@ from typing import Any
 
 from agentic.data.tickets.TicketEventStore import TicketEventStore
 from agentic.data.tickets.user_context import reset_current_user_id, set_current_user_id
+
+logger = logging.getLogger(__name__)
 
 
 class UserEventHub:
@@ -37,7 +40,7 @@ class UserEventHub:
 
 
 class TicketEventPublisher:
-    """Persist a customer-facing event before broadcasting it to live SSE clients."""
+    """Persist events when possible, then broadcast them to live SSE clients."""
 
     def __init__(self, event_store: TicketEventStore, hub: UserEventHub) -> None:
         self._event_store = event_store
@@ -55,29 +58,42 @@ class TicketEventPublisher:
         payload = {**data, "ticket_id": ticket_id}
         user_token = set_current_user_id(user_id)
         try:
-            stored = await self._event_store.put(
-                ticket_id=ticket_id,
-                event_type=event_type,
-                category=category,
-                content=payload,
-            )
+            try:
+                stored = await self._event_store.put(
+                    ticket_id=ticket_id,
+                    event_type=event_type,
+                    category=category,
+                    content=payload,
+                )
+            except Exception:
+                logger.exception(
+                    "Could not persist customer event %s for ticket %s; "
+                    "publishing it to live subscribers",
+                    event_type,
+                    ticket_id,
+                )
+                event = {"event": event_type, "data": payload}
+            else:
+                event = {
+                    "id": str(stored["seq"]),
+                    "event": event_type,
+                    "data": payload,
+                }
         finally:
             reset_current_user_id(user_token)
 
-        event = {
-            "id": str(stored["seq"]),
-            "event": event_type,
-            "data": payload,
-        }
         self._hub.publish(user_id, event)
         return event
 
 
 def encode_sse(event: dict[str, Any]) -> str:
     """Encode one event using the standard SSE wire format."""
-    event_id = str(event["id"])
+    event_id = event.get("id")
     event_type = str(event["event"])
-    if any(character in event_id + event_type for character in "\r\n\0"):
+    if event_id is not None and any(
+        character in str(event_id) + event_type for character in "\r\n\0"
+    ):
         raise ValueError("SSE id and event type must be single-line values")
     data = json.dumps(event["data"], ensure_ascii=False, separators=(",", ":"))
-    return f"id: {event_id}\nevent: {event_type}\ndata: {data}\n\n"
+    id_line = f"id: {event_id}\n" if event_id is not None else "id:\n"
+    return f"{id_line}event: {event_type}\ndata: {data}\n\n"
